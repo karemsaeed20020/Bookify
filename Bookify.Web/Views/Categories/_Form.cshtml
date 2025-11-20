@@ -1,19 +1,21 @@
 ﻿@model CategoryFormViewModel
-<form data-ajax-method="post" data-ajax-success="showSuccessMessage" data-ajax-failure="showErrorMessage" asp-action="@(Model?.Id > 0 ? "Edit" : "Create")">
-    <!-- Fixed action -->
+
+<form asp-action="@(Model?.Id > 0 ? "Edit" : "Create")"
+      data-ajax-method="post"
+      data-ajax="true"
+      data-ajax-success="onModalSuccess"
+      data-ajax-failure="showErrorMessage">
     @if (Model?.Id > 0)
     {
         <input type="hidden" asp-for="Id" />
     }
     <div class="mb-5">
-        <div class="form-floating mb-7">
-            <input type="text" class="form-control form-control-solid" placeholder="Name" asp-for="Name" />
+        <div class="form-floating mb-2">
+            <input type="text" class="form-control" placeholder="Name" asp-for="Name" />
             <label asp-for="Name"></label>
-            <span asp-validation-for="Name" class="text-danger"></span>
         </div>
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check2"></i>
-            Save
-        </button>
+        <span asp-validation-for="Name" class="text-danger d-block"></span>
     </div>
+
+    <partial name="_ModalFooter" />
 </form>
