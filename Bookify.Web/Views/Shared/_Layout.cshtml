@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="~/assets/css/style.bundle.css" type="text/css" />
     <link href="~/lib/sweetalert2/dist/sweetalert2.css" rel="stylesheet" />
     <link href="~/lib/sweetalert2/dist/sweetalert2.min.css" rel="stylesheet" />
+	@await RenderSectionAsync("Styles", required: false)
 	<!--end::Global Stylesheets Bundle-->
 	<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 	<link rel="stylesheet" href="~/Bookify.Web.styles.css" asp-append-version="true" />
@@ -69,6 +70,7 @@
     <!--end::Global Javascript Bundle-->
     <script src="~/lib/sweetalert2/dist/sweetalert2.all.js"></script>
     <script src="~/lib/sweetalert2/dist/sweetalert2.all.min.js"></script>
+	@await RenderSectionAsync("Plugins", required: false)
 	<script src="~/js/site.js" asp-append-version="true"></script>
 	@await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -5,6 +5,10 @@
     ViewData["Title"] = "Categories";
 }
 
+@section Styles {
+    <link href="~/plugins/datatables.bundle.css" rel="stylesheet" />
+}
+
 <div class="card shadow-sm">
     <div class="card-header">
         <h3 class="card-title">
@@ -79,11 +83,16 @@
 
 <input type="hidden" name="__RequestVerificationToken" value="@antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
+@section Plugins {
+    <script src="~/plugins/datatables.bundle.js"></script>
+}
+
 @section Scripts
 {
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
+            $('table').DataTable()
             $('body').delegate('.js-toggle-status', 'click', function () {
                 var btn = $(this);
 
