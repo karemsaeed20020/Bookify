@@ -18,7 +18,14 @@ namespace Bookify.Web.Controllers
         public IActionResult Index()
         {
             //TODO: use viewModel
-            var categories = _context.Categories.AsNoTracking().ToList();
+            var categories = _context.Categories.Select(c => new CategoryViewModel
+            {
+                Id = c.Id,
+                Name = c.Name,
+                IsDeleted = c.IsDeleted,
+                LastUpdatedOn = c.LastUpdatedOn,
+            })
+                .AsNoTracking().ToList();
             return View(categories);
         }
 
@@ -39,8 +46,14 @@ namespace Bookify.Web.Controllers
             var category = new Category { Name = model.Name };
             _context.Add(category);
             _context.SaveChanges();
-
-            return PartialView("_CategoryRow", category);
+            var viewModel = new CategoryViewModel
+            {
+                Id = category.Id,
+                Name = category.Name,
+                IsDeleted = category.IsDeleted,
+                LastUpdatedOn = category.LastUpdatedOn
+            };
+            return PartialView("_CategoryRow", viewModel);
         }
 
         [HttpGet]
@@ -78,7 +91,14 @@ namespace Bookify.Web.Controllers
 
             _context.SaveChanges();
 
-            return PartialView("_CategoryRow", category);
+            var viewModel = new CategoryViewModel
+            {
+                Id = category.Id,
+                Name = category.Name,
+                IsDeleted = category.IsDeleted,
+                LastUpdatedOn = category.LastUpdatedOn
+            };
+            return PartialView("_CategoryRow", viewModel);
         }
 
         [HttpPost]

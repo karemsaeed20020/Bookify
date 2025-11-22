@@ -24,6 +24,9 @@ function showErrorMessage(message = 'Something went wrong!') {
     });
 }
 
+function onModalBegin() {
+    $('body :submit').attr("disabled", "disabled") 
+}
 function onModalSuccess(row) {
     showSuccessMessage();
     $('#Modal').modal('hide');
