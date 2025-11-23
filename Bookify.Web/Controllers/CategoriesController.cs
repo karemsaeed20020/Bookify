@@ -124,5 +124,6 @@ namespace Bookify.Web.Controllers
             var isAllowed = category is null || category.Id.Equals(model.Id);
             return Json(isAllowed);
         }
+       
     }
 }
