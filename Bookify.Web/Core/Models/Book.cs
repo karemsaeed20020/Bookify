@@ -8,6 +8,7 @@ namespace Bookify.Web.Core.Models
         public int Id { get; set; }
         [MaxLength(500)]
         public string Title { get; set; } = null!;
+
         public int AuthorId { get; set; }
         public Author? Author { get; set; }
         [MaxLength(200)]
