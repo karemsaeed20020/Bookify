@@ -80,8 +80,11 @@
             <!-- Row 4: Image & Hall -->
             <div class="row mb-4">
                 <div class="col-md-6">
+                    <div>
+                        <img id="ImagePreview" class="img-thumbnail" style="display: none; max-height: 200px;" />
+                    </div>
                     <div class="form-floating">
-                        <input type="file" class="form-control" placeholder="" asp-for="Image" />
+                        <input type="file" class="form-control" placeholder="" asp-for="Image" accept=".jpg,.jpeg,.png" onchange="previewImage(this)" />
                         <label asp-for="Image"></label>
                     </div>
                     <span asp-validation-for="Image" class="text-danger small mt-1 d-block"></span>
@@ -133,4 +136,23 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('ImagePreview');
+
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+    </script>
 }
