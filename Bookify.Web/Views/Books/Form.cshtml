@@ -26,6 +26,10 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="post" asp-controller="Books" enctype="multipart/form-data">
+            @if (Model.Id > 0)
+            {
+                <input type="hidden" asp-for="Id" />
+            }
             <!-- Row 1: Title -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -80,14 +84,32 @@
             <!-- Row 4: Image & Hall -->
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <div>
-                        <img id="ImagePreview" class="img-thumbnail" style="display: none; max-height: 200px;" />
+                    @{
+                        var hasExistingImage = !string.IsNullOrEmpty(Model.ImageUrl);
+                        var imageSource = hasExistingImage ? $"~/images/books/{Model.ImageUrl}" : "~/images/books/n-book.jpg";
+                        var imageDisplayStyle = hasExistingImage ? "display: block;" : "display: none;";
+                    }
+
+                    <div class="mb-3">
+                        <img id="ImagePreview" class="img-thumbnail"
+                             src="@Url.Content(imageSource)"
+                             style="@imageDisplayStyle max-height: 200px; width: auto;"
+                             alt="Book cover preview" />
                     </div>
+
                     <div class="form-floating">
-                        <input type="file" class="form-control" placeholder="" asp-for="Image" accept=".jpg,.jpeg,.png" onchange="previewImage(this)" />
-                        <label asp-for="Image"></label>
+                        <input type="file" class="form-control" placeholder="" asp-for="Image"
+                               accept=".jpg,.jpeg,.png" onchange="previewImage(this)" />
+                        <label asp-for="Image">@(hasExistingImage ? "Change Image" : "Upload Image")</label>
                     </div>
                     <span asp-validation-for="Image" class="text-danger small mt-1 d-block"></span>
+
+                    @if (hasExistingImage)
+                    {
+                        <div class="form-text mt-1">
+                            <small class="text-muted">Current image: @Model.ImageUrl</small>
+                        </div>
+                    }
                 </div>
                 <div class="col-md-6">
                     <div class="form-floating">
@@ -128,6 +150,7 @@
                             Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                         </span>
                     </button>
+                    <a href="@Url.Action("Index", "Books")" class="btn btn-secondary ms-2">Cancel</a>
                 </div>
             </div>
         </form>
@@ -138,6 +161,17 @@
     <partial name="_ValidationScriptsPartial" />
 
     <script>
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const preview = document.getElementById('ImagePreview');
+            const imageUrl = '@Model.ImageUrl';
+
+            // Show preview if there's an existing image
+            if (imageUrl && imageUrl !== '') {
+                preview.style.display = 'block';
+            }
+        });
+
         function previewImage(input) {
             const preview = document.getElementById('ImagePreview');
 
@@ -151,7 +185,12 @@
 
                 reader.readAsDataURL(input.files[0]);
             } else {
-                preview.style.display = 'none';
+                // Only hide if there's no existing image
+                const imageUrl = '@Model.ImageUrl';
+                if (!imageUrl || imageUrl === '') {
+                    preview.style.display = 'none';
+                    preview.src = '/images/books/n-book.jpg';
+                }
             }
         }
     </script>

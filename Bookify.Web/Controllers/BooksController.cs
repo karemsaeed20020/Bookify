@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
+using Bookify.Web.Core.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Web.Controllers
 {
@@ -68,6 +70,77 @@ namespace Bookify.Web.Controllers
             }
             _context.Add(book);
             _context.SaveChanges();
+            return RedirectToAction(nameof(Index));
+        }
+        public IActionResult Edit(int id)
+        {
+            var book = _context.Books.Include(b => b.Categories).SingleOrDefault(b => b.Id == id);
+            if (book is null)
+            {
+                return NotFound();
+            }
+            var model = _mapper.Map<BookFromViewModel>(book);
+            var viewModel = PopulateViewModel(model);
+            viewModel.SelectedCategories = book.Categories.Select(c => c.CategoryId).ToList();
+            return View("Form", viewModel);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Edit(BookFromViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View("Form", PopulateViewModel(model));
+
+            var book = _context.Books.Include(b => b.Categories).SingleOrDefault(b => b.Id == model.Id);
+
+            if (book is null)
+                return NotFound();
+
+            if (model.Image is not null)
+            {
+                if (!string.IsNullOrEmpty(book.ImageUrl))
+                {
+                    var oldImagePath = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", book.ImageUrl);
+
+                    if (System.IO.File.Exists(oldImagePath))
+                        System.IO.File.Delete(oldImagePath);
+                }
+
+                var extension = Path.GetExtension(model.Image.FileName);
+
+                if (!_allowedExtensions.Contains(extension))
+                {
+                    ModelState.AddModelError(nameof(model.Image), Errors.NotAllowedExtension);
+                    return View("Form", PopulateViewModel(model));
+                }
+
+                if (model.Image.Length > _maxAllowedSize)
+                {
+                    ModelState.AddModelError(nameof(model.Image), Errors.MaxSize);
+                    return View("Form", PopulateViewModel(model));
+                }
+
+                var imageName = $"{Guid.NewGuid()}{extension}";
+
+                var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
+
+                using var stream = System.IO.File.Create(path);
+                model.Image.CopyTo(stream);
+
+                model.ImageUrl = imageName;
+            }
+
+            else if (model.Image is null && !string.IsNullOrEmpty(book.ImageUrl))
+                model.ImageUrl = book.ImageUrl;
+
+            book = _mapper.Map(model, book);
+            book.LastUpdatedOn = DateTime.Now;
+
+            foreach (var category in model.SelectedCategories)
+                book.Categories.Add(new BookCategory { CategoryId = category });
+
+            _context.SaveChanges();
+
             return RedirectToAction(nameof(Index));
         }
         private BookFromViewModel PopulateViewModel(BookFromViewModel? model = null)
