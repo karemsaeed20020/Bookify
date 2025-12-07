@@ -64,141 +64,110 @@
             </div>
             <span asp-validation-for="Image" class="text-danger d-block"></span>
             <!--end::Image input-->
-            <!-- Row 1: Title -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <input type="text" class="form-control" placeholder="" asp-for="Title" />
-                        <label asp-for="Title"></label>
-                    </div>
-                    <span asp-validation-for="Title" class="text-danger small mt-1 d-block"></span>
-                </div>
-            </div>
-
-            <!-- Row 2: Author & Publisher -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <select class="form-select js-select2" data-placeholder="Select an author" asp-for="AuthorId" asp-items="@Model.Authors">
-                            <option value="">Select an author</option>
-                        </select>
-                        <label asp-for="AuthorId"></label>
-                    </div>
-                    <span asp-validation-for="AuthorId" class="text-danger small mt-1 d-block"></span>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <input type="text" class="form-control" placeholder="" asp-for="Publisher" />
-                        <label asp-for="Publisher"></label>
-                    </div>
-                    <span asp-validation-for="Publisher" class="text-danger small mt-1 d-block"></span>
-                </div>
-            </div>
-
-            <!-- Row 3: Categories & Publishing Date -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <select class="form-select js-select2" asp-for="SelectedCategories" data-placeholder="Select Categories" asp-items="@Model.Categories">
-                            <option value="">Select Categories</option>
-                        </select>
-                        <label asp-for="SelectedCategories"></label>
-                    </div>
-                    <span asp-validation-for="SelectedCategories" class="text-danger small mt-1 d-block"></span>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <input type="date" class="form-control" placeholder="" asp-for="PublishingDate" />
-                        <label asp-for="PublishingDate"></label>
-                    </div>
-                    <span asp-validation-for="PublishingDate" class="text-danger small mt-1 d-block"></span>
-                </div>
-            </div>
-
-            <!-- Row 4: Image & Hall -->
-            <div class="row mb-4">
-                
-                <div class="col-md-6">
-                    <div class="form-floating">
-                        <input type="text" class="form-control" placeholder="" asp-for="Hall" />
-                        <label asp-for="Hall"></label>
-                    </div>
-                    <span asp-validation-for="Hall" class="text-danger small mt-1 d-block"></span>
-                </div>
-            </div>
-
-            <!-- Row 5: Checkbox -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" asp-for="IsAvailableForRental" />
-                        <label class="form-check-label" asp-for="IsAvailableForRental"></label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Row 6: Description -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="form-floating">
-                        <textarea class="form-control" placeholder="" asp-for="Description" style="min-height: 120px;"></textarea>
-                        <label asp-for="Description"></label>
-                    </div>
-                    <span asp-validation-for="Description" class="text-danger small mt-1 d-block"></span>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
             <div class="row">
-                <div class="col-md-12">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="indicator-label">Save</span>
-                        <span class="indicator-progress">
-                            Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
-                        </span>
-                    </button>
-                    <a href="@Url.Action("Index", "Books")" class="btn btn-secondary ms-2">Cancel</a>
+                <div class="col-md-5">
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="form-floating mb-2">
+                                    <input type="text" class="form-control"  asp-for="Title" />
+                                    <label asp-for="Title"></label>
+                                </div>
+                                <span asp-validation-for="Title" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="form-floating mb-2">
+                                    <select class="form-select js-select2" data-placeholder="Select an author" asp-for="AuthorId" asp-items="@Model.Authors">
+                                        <option value="">Select an author</option>
+                                    </select>
+                                    <label asp-for="AuthorId"></label>
+                                </div>
+                                <span asp-validation-for="AuthorId" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="mb-2">
+                                    <select class="form-select js-select2" data-placeholder="Select categories" asp-for="SelectedCategories" asp-items="@Model.Categories">
+                                        <option>Select categories</option>
+                                    </select>
+                                </div>
+                                <span asp-validation-for="SelectedCategories" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="form-floating mb-2">
+                                    <input type="text" class="form-control"  asp-for="Publisher" />
+                                    <label asp-for="Publisher"></label>
+                                </div>
+                                <span asp-validation-for="Publisher" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="form-floating mb-2">
+                                    <input type="text" class="form-control js-datepicker" placeholder="Publishing Date" asp-for="PublishingDate" />
+                                    <label asp-for="PublishingDate"></label>
+                                </div>
+                                <span asp-validation-for="PublishingDate" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" asp-for="IsAvailableForRental">
+                                <label class="form-check-label" asp-for="IsAvailableForRental"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="mb-5">
+                                <div class="form-floating mb-2">
+                                    <input type="text" class="form-control" placeholder="Hall" asp-for="Hall" />
+                                    <label asp-for="Hall"></label>
+                                </div>
+                                <span asp-validation-for="Hall" class="text-danger d-block"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="mb-5">
+                        <div class="form-floating mb-2">
+                            <textarea class="form-control js-tinymce" placeholder="Description" asp-for="Description"></textarea>
+                            <label asp-for="Description"></label>
+                        </div>
+                        <span asp-validation-for="Description" class="text-danger d-block"></span>
+                    </div>
                 </div>
             </div>
+            <button type="submit" class="btn btn-primary">
+                <span class="indicator-label">
+                    Save
+                </span>
+                <span class="indicator-progress">
+                    Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+                </span>
+            </button>
         </form>
     </div>
 </div>
 
-@section Scripts {
+@section Scripts
+{
+    <script src="~/assets/plugins/tinymce/tinymce.bundle.js"></script>
     <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        // Initialize preview on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const preview = document.getElementById('ImagePreview');
-            const imageUrl = '@Model.ImageUrl';
-
-            // Show preview if there's an existing image
-            if (imageUrl && imageUrl !== '') {
-                preview.style.display = 'block';
-            }
-        });
-
-        function previewImage(input) {
-            const preview = document.getElementById('ImagePreview');
-
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                }
-
-                reader.readAsDataURL(input.files[0]);
-            } else {
-                // Only hide if there's no existing image
-                const imageUrl = '@Model.ImageUrl';
-                if (!imageUrl || imageUrl === '') {
-                    preview.style.display = 'none';
-                    preview.src = '/images/books/n-book.jpg';
-                }
-            }
-        }
-    </script>
 }

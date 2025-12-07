@@ -25,9 +25,12 @@ function showErrorMessage(message = 'Something went wrong!') {
 }
 
 function onModalBegin() {
-    $('body :submit').attr("disabled", "disabled") 
+    console.log('Modal begin - disabling submit buttons');
+    $('body :submit').attr("disabled", "disabled");
 }
+
 function onModalSuccess(row) {
+    console.log('Modal success - operation completed');
     showSuccessMessage();
     $('#Modal').modal('hide');
 
@@ -39,11 +42,32 @@ function onModalSuccess(row) {
     var newRow = $(row);
     datatable.row.add(newRow).draw();
 
-    KTMenu.init();
-    KTMenu.initHandlers();
+    // Reinitialize menus if needed
+    if (typeof KTMenu !== 'undefined') {
+        KTMenu.init();
+        KTMenu.initHandlers();
+    }
 }
 
-//DataTables
+function onModalFailure(xhr) {
+    console.log('Modal failure - enabling submit buttons');
+    $('body :submit').removeAttr('disabled');
+
+    if (xhr.status === 400) {
+        // Validation errors - update the form with validation messages
+        $('#Modal .modal-body').html(xhr.responseText);
+        $.validator.unobtrusive.parse($('#Modal form'));
+    } else {
+        showErrorMessage('An error occurred while processing your request.');
+    }
+}
+
+function onModalComplete() {
+    console.log('Modal complete - enabling submit buttons');
+    $('body :submit').removeAttr('disabled');
+}
+
+// DataTables
 var headers = $('th');
 $.each(headers, function (i) {
     if (!$(this).hasClass('js-no-export'))
@@ -58,6 +82,7 @@ var KTDatatables = function () {
         datatable = $(table).DataTable({
             "info": false,
             'pageLength': 10,
+            "order": []
         });
     }
 
@@ -108,7 +133,9 @@ var KTDatatables = function () {
                 const target = document.querySelector('.dt-buttons .buttons-' + exportValue);
 
                 // Trigger click event on hidden datatable export buttons
-                target.click();
+                if (target) {
+                    target.click();
+                }
             });
         });
     }
@@ -116,9 +143,11 @@ var KTDatatables = function () {
     // Search Datatable --- official docs reference: https://datatables.net/reference/api/search()
     var handleSearchDatatable = () => {
         const filterSearch = document.querySelector('[data-kt-filter="search"]');
-        filterSearch.addEventListener('keyup', function (e) {
-            datatable.search(e.target.value).draw();
-        });
+        if (filterSearch) {
+            filterSearch.addEventListener('keyup', function (e) {
+                datatable.search(e.target.value).draw();
+            });
+        }
     }
 
     // Public methods
@@ -127,6 +156,7 @@ var KTDatatables = function () {
             table = document.querySelector('.js-datatables');
 
             if (!table) {
+                console.warn('DataTable element not found');
                 return;
             }
 
@@ -138,65 +168,79 @@ var KTDatatables = function () {
 }();
 
 $(document).ready(function () {
-    //TinyMCE
-    var options = { selector: ".js-tinymce", height: "422" };
+    console.log('Document ready - initializing authors page');
 
-    if (KTThemeMode.getMode() === "dark") {
-        options["skin"] = "oxide-dark";
-        options["content_css"] = "dark";
+    // Check if modal exists
+    if ($('#Modal').length === 0) {
+        console.error('❌ MODAL NOT FOUND: No element with ID "Modal" exists on the page!');
+        showErrorMessage('Modal container not found. Please check the page HTML.');
+    } else {
+        console.log('✅ Modal found on page');
     }
-
-    tinymce.init(options);
-
-    //Select2
-    $('.js-select2').select2();
-
-    //Datepicker
-    $('.js-datepicker').daterangepicker({
-        singleDatePicker: true,
-        autoApply: true,
-        drops: 'up',
-        maxDate: new Date()
-    });
-
 
     var message = $('#Message').text();
     if (message !== '') {
         showSuccessMessage(message);
     }
 
-    //DataTables Initialization
-    KTUtil.onDOMContentLoaded(function () {
+    // DataTables Initialization
+    if (typeof KTUtil !== 'undefined') {
+        KTUtil.onDOMContentLoaded(function () {
+            KTDatatables.init();
+        });
+    } else {
         KTDatatables.init();
-    });
+    }
 
-    //Handle bootstrap modal
+    // Handle bootstrap modal
     $('body').delegate('.js-render-modal', 'click', function () {
         var btn = $(this);
         var modal = $('#Modal');
+
+        console.log('Add button clicked, loading modal...');
 
         modal.find('#ModalLabel').text(btn.data('title'));
 
         if (btn.data('update') !== undefined) {
             updatedRow = btn.parents('tr');
-            console.log(updatedRow);
+            console.log('Update mode - row stored:', updatedRow);
         }
 
+        // Show loading state in modal
+        modal.find('.modal-body').html(`
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading form...</p>
+            </div>
+        `);
+
+        // Show modal first
+        modal.modal('show');
+
+        // Then load the form content
         $.get({
             url: btn.data('url'),
             success: function (form) {
+                console.log('Form loaded successfully');
                 modal.find('.modal-body').html(form);
                 $.validator.unobtrusive.parse(modal);
             },
-            error: function () {
-                showErrorMessage();
+            error: function (xhr, status, error) {
+                console.error('Error loading form:', error);
+                modal.find('.modal-body').html(`
+                    <div class="alert alert-danger">
+                        <h6>Error Loading Form</h6>
+                        <p>Failed to load the form. Please try again.</p>
+                    </div>
+                `);
+                showErrorMessage('Failed to load form. Please try again.');
             }
         });
-
-        modal.modal('show');
     });
 
-    //Handle Toggle Status with SweetAlert
+    // Handle Toggle Status with SweetAlert
     $('body').delegate('.js-toggle-status', 'click', function () {
         var btn = $(this);
         var row = btn.parents('tr');
