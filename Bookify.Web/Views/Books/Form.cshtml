@@ -79,8 +79,8 @@
             <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <select class="form-select" asp-for="AuthorId" asp-items="@Model.Authors">
-                            <option value="">Select author</option>
+                        <select class="form-select js-select2" data-placeholder="Select an author" asp-for="AuthorId" asp-items="@Model.Authors">
+                            <option value="">Select an author</option>
                         </select>
                         <label asp-for="AuthorId"></label>
                     </div>
@@ -99,7 +99,7 @@
             <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <select class="form-select" asp-for="SelectedCategories" asp-items="@Model.Categories">
+                        <select class="form-select js-select2" asp-for="SelectedCategories" data-placeholder="Select Categories" asp-items="@Model.Categories">
                             <option value="">Select Categories</option>
                         </select>
                         <label asp-for="SelectedCategories"></label>
