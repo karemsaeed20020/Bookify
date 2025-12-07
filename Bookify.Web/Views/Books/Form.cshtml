@@ -30,6 +30,40 @@
             {
                 <input type="hidden" asp-for="Id" />
             }
+            <!--begin::Image input-->
+            <div class="image-input image-input-empty mb-10" data-kt-image-input="true" style="background-image: url(/images/@(string.IsNullOrEmpty(Model.ImageUrl) ? "image-placeholder.jpg" : $"/books/{Model.ImageUrl}"))">
+                <!--begin::Image preview wrapper-->
+                <div class="image-input-wrapper w-125px h-200px"></div>
+                <!--end::Image preview wrapper-->
+                <!--begin::Edit button-->
+                <label class="btn btn-icon btn-circle btn-color-muted btn-active-color-primary w-25px h-25px bg-body shadow"
+                       data-kt-image-input-action="change"
+                       data-bs-dismiss="click">
+                    <i class="bi bi-pencil-fill fs-7"></i>
+
+                    <!--begin::Inputs-->
+                    <input type="file" asp-for="Image" accept=".png, .jpg, .jpeg" />
+                    <input type="hidden" name="avatar_remove" />
+                    <!--end::Inputs-->
+                </label>
+                <!--end::Edit button-->
+                <!--begin::Cancel button-->
+                <span class="btn btn-icon btn-circle btn-color-muted btn-active-color-primary w-25px h-25px bg-body shadow"
+                      data-kt-image-input-action="cancel"
+                      data-bs-dismiss="click">
+                    <i class="bi bi-x fs-2"></i>
+                </span>
+                <!--end::Cancel button-->
+                <!--begin::Remove button-->
+                <span class="btn btn-icon btn-circle btn-color-muted btn-active-color-primary w-25px h-25px bg-body shadow"
+                      data-kt-image-input-action="remove"
+                      data-bs-dismiss="click">
+                    <i class="bi bi-x fs-2"></i>
+                </span>
+                <!--end::Remove button-->
+            </div>
+            <span asp-validation-for="Image" class="text-danger d-block"></span>
+            <!--end::Image input-->
             <!-- Row 1: Title -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -83,34 +117,7 @@
 
             <!-- Row 4: Image & Hall -->
             <div class="row mb-4">
-                <div class="col-md-6">
-                    @{
-                        var hasExistingImage = !string.IsNullOrEmpty(Model.ImageUrl);
-                        var imageSource = hasExistingImage ? $"~/images/books/{Model.ImageUrl}" : "~/images/books/n-book.jpg";
-                        var imageDisplayStyle = hasExistingImage ? "display: block;" : "display: none;";
-                    }
-
-                    <div class="mb-3">
-                        <img id="ImagePreview" class="img-thumbnail"
-                             src="@Url.Content(imageSource)"
-                             style="@imageDisplayStyle max-height: 200px; width: auto;"
-                             alt="Book cover preview" />
-                    </div>
-
-                    <div class="form-floating">
-                        <input type="file" class="form-control" placeholder="" asp-for="Image"
-                               accept=".jpg,.jpeg,.png" onchange="previewImage(this)" />
-                        <label asp-for="Image">@(hasExistingImage ? "Change Image" : "Upload Image")</label>
-                    </div>
-                    <span asp-validation-for="Image" class="text-danger small mt-1 d-block"></span>
-
-                    @if (hasExistingImage)
-                    {
-                        <div class="form-text mt-1">
-                            <small class="text-muted">Current image: @Model.ImageUrl</small>
-                        </div>
-                    }
-                </div>
+                
                 <div class="col-md-6">
                     <div class="form-floating">
                         <input type="text" class="form-control" placeholder="" asp-for="Hall" />
