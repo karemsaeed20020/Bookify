@@ -1,7 +1,9 @@
-﻿using Bookify.Web.Core.Models;
+﻿using Bookify.Web.Core.Consts;
+using Bookify.Web.Core.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.ComponentModel.DataAnnotations; // Add this line
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace Bookify.Web.Core.ViewModels
@@ -11,10 +13,12 @@ namespace Bookify.Web.Core.ViewModels
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Title is required")]
-        [MaxLength(500, ErrorMessage = "Title cannot be more than 500 characters")]
+        [MaxLength(500, ErrorMessage = Errors.MaxLength)]
+        [Remote("AllowItem", null!, AdditionalFields = "Id,AuthorId", ErrorMessage = Errors.Duplicated)]
         public string Title { get; set; } = null!;
 
         [Required(ErrorMessage = "Author is required")]
+        [Remote("AllowItem", null!, AdditionalFields = "Id,Title", ErrorMessage = Errors.Duplicated)]
         [Display(Name = "Author")]
         public int AuthorId { get; set; }
 
