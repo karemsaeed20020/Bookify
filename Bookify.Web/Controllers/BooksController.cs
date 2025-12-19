@@ -2,9 +2,13 @@
 using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
 using Bookify.Web.Core.ViewModels;
+using Bookify.Web.Settings;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Bookify.Web.Controllers
 {
@@ -13,17 +17,25 @@ namespace Bookify.Web.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly Cloudinary _cloudinary;
 
         private List<string> _allowedExtensions = new() { ".jpg", ".jpeg", ".png" };
         private int _maxAllowedSize = 2097152;
 
 
         // KEEP ONLY ONE CONSTRUCTOR
-        public BooksController(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment webHostEnvironment)
+        public BooksController(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment webHostEnvironment, IOptions<CloudinarySettings> cloudinary)
         {
             _context = context;
             _mapper = mapper;
             _webHostEnvironment = webHostEnvironment;
+            Account account = new()
+            {
+                Cloud = cloudinary.Value.Cloud,
+                ApiKey = cloudinary.Value.ApiKey,
+                ApiSecret = cloudinary.Value.ApiSecret
+            };
+            _cloudinary = new Cloudinary(account);
         }
 
         public IActionResult Index()
@@ -37,7 +49,7 @@ namespace Bookify.Web.Controllers
         }
         [HttpPost]
         [AutoValidateAntiforgeryToken]
-        public IActionResult Create(BookFromViewModel model)
+        public async Task<IActionResult> Create(BookFromViewModel model)
         {
             
             if (!ModelState.IsValid)
@@ -59,10 +71,16 @@ namespace Bookify.Web.Controllers
                     return View("Form", PopulateViewModel(model));
                 }
                 var imageName = $"{Guid.NewGuid()}{extension}";
-                var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
-                using var stream = System.IO.File.Create(path);
-                model.Image.CopyTo(stream);
-                book.ImageUrl = imageName;
+                //var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
+                //using var stream = System.IO.File.Create(path);
+                //await model.Image.CopyToAsync(stream);
+                using var stream = model.Image.OpenReadStream();
+                var imageParams = new ImageUploadParams
+                {
+                    File = new FileDescription(imageName, stream)
+                };
+                var result = await _cloudinary.UploadAsync(imageParams);
+                book.ImageUrl = result.SecureUrl.ToString();
             }
             foreach(var category in model.SelectedCategories)
             {
@@ -72,7 +90,7 @@ namespace Bookify.Web.Controllers
             _context.SaveChanges();
             return RedirectToAction(nameof(Index));
         }
-        public IActionResult Edit(int id)
+        public  IActionResult Edit(int id)
         {
             var book = _context.Books.Include(b => b.Categories).SingleOrDefault(b => b.Id == id);
             if (book is null)
@@ -86,7 +104,7 @@ namespace Bookify.Web.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Edit(BookFromViewModel model)
+        public async Task<IActionResult> Edit(BookFromViewModel model)
         {
             if (!ModelState.IsValid)
                 return View("Form", PopulateViewModel(model));
@@ -125,12 +143,12 @@ namespace Bookify.Web.Controllers
                 var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
 
                 using var stream = System.IO.File.Create(path);
-                model.Image.CopyTo(stream);
+                await model.Image.CopyToAsync(stream);
 
                 model.ImageUrl = imageName;
             }
 
-            else if (model.Image is null && !string.IsNullOrEmpty(book.ImageUrl))
+            else if (!string.IsNullOrEmpty(book.ImageUrl))
                 model.ImageUrl = book.ImageUrl;
 
             book = _mapper.Map(model, book);
