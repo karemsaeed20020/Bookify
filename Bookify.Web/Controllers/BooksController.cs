@@ -77,10 +77,12 @@ namespace Bookify.Web.Controllers
                 using var stream = model.Image.OpenReadStream();
                 var imageParams = new ImageUploadParams
                 {
-                    File = new FileDescription(imageName, stream)
+                    File = new FileDescription(imageName, stream),
+                    UseFilename = true
                 };
                 var result = await _cloudinary.UploadAsync(imageParams);
                 book.ImageUrl = result.SecureUrl.ToString();
+                book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl);
             }
             foreach(var category in model.SelectedCategories)
             {
@@ -172,6 +174,7 @@ namespace Bookify.Web.Controllers
             
             return viewModel;
         }
+        
         public IActionResult AllowItem(BookFromViewModel model)
         {
             var book = _context.Books.SingleOrDefault(b => b.Title == model.Title && b.AuthorId == model.AuthorId);
@@ -179,6 +182,17 @@ namespace Bookify.Web.Controllers
 
             return Json(isAllowed);
         }
+        private string GetThumbnailUrl(string url)
+        {
+            var separator = "image/upload/";
+            var urlParts = url.Split(separator);
+
+            var thumbnailUrl = $"{urlParts[0]}{separator}c_thumb,w_200,g_face/{urlParts[1]}";
+
+            return thumbnailUrl;
+        }
+
+
 
     }
 
