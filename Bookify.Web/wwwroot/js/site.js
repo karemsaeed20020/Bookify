@@ -24,8 +24,11 @@ function showErrorMessage(message = 'Something went wrong!') {
     });
 }
 
+function disbableSubmitButtons() {
+    $('body :submit').attr("disabled", "disabled")
+}
 function onModalBegin() {
-    $('body :submit').attr("disabled", "disabled") 
+    disbableSubmitButtons();
 }
 function onModalSuccess(row) {
     showSuccessMessage();
@@ -138,18 +141,28 @@ var KTDatatables = function () {
 }();
 
 $(document).ready(function () {
+    // disable submit buttons on form submit
+    $('form').on('submit', function () {
+        var isValid = $(this).valid();
+        if (isValid) disbableSubmitButtons();
+    });
     //TinyMCE
-    var options = { selector: ".js-tinymce", height: "422" };
+    if ($('.js-tinymce').length > 0) {
+        var options = { selector: ".js-tinymce", height: "422" };
 
-    if (KTThemeMode.getMode() === "dark") {
-        options["skin"] = "oxide-dark";
-        options["content_css"] = "dark";
+        if (KTThemeMode.getMode() === "dark") {
+            options["skin"] = "oxide-dark";
+            options["content_css"] = "dark";
+        }
+
+        tinymce.init(options);
     }
-
-    tinymce.init(options);
-
+ 
     //Select2
     $('.js-select2').select2();
+    $('.js-select2').on('select2:select', function (e) {
+        $("form").validate().element("#"+ $(this).attr("id"));
+    });
 
     //Datepicker
     $('.js-datepicker').daterangepicker({
