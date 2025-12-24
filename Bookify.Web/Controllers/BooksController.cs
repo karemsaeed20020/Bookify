@@ -42,6 +42,17 @@ namespace Bookify.Web.Controllers
         {
             return View();
         }
+        public IActionResult Details(int id)
+        {
+            var book = _context.Books.Include(b => b.Author).Include(b => b.Categories).ThenInclude(c => c.Category).SingleOrDefault(b => b.Id == id);
+            if (book is null)
+            {
+                return NotFound();
+            }
+            var viewModel = _mapper.Map<BookViewModel>(book);
+            return View(viewModel);
+        }
+
         public IActionResult Create()
         {
             
@@ -83,14 +94,16 @@ namespace Bookify.Web.Controllers
                 var result = await _cloudinary.UploadAsync(imageParams);
                 book.ImageUrl = result.SecureUrl.ToString();
                 book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl);
+                book.ImagePublicId = result.PublicId;
+
             }
-            foreach(var category in model.SelectedCategories)
+            foreach (var category in model.SelectedCategories)
             {
                 book.Categories.Add(new BookCategory { CategoryId = category});
             }
             _context.Add(book);
             _context.SaveChanges();
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new {id = book.Id});
         }
         public  IActionResult Edit(int id)
         {
@@ -115,15 +128,18 @@ namespace Bookify.Web.Controllers
 
             if (book is null)
                 return NotFound();
+            string imagePublicId = null;
 
             if (model.Image is not null)
             {
                 if (!string.IsNullOrEmpty(book.ImageUrl))
                 {
-                    var oldImagePath = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", book.ImageUrl);
+                    //var oldImagePath = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", book.ImageUrl);
 
-                    if (System.IO.File.Exists(oldImagePath))
-                        System.IO.File.Delete(oldImagePath);
+                    //if (System.IO.File.Exists(oldImagePath))
+                    //    System.IO.File.Delete(oldImagePath);
+                    await _cloudinary.DeleteResourcesAsync(book.ImagePublicId);
+
                 }
 
                 var extension = Path.GetExtension(model.Image.FileName);
@@ -142,12 +158,24 @@ namespace Bookify.Web.Controllers
 
                 var imageName = $"{Guid.NewGuid()}{extension}";
 
-                var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
+                //var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
 
-                using var stream = System.IO.File.Create(path);
-                await model.Image.CopyToAsync(stream);
+                //using var stream = System.IO.File.Create(path);
+                //await model.Image.CopyToAsync(stream);
 
-                model.ImageUrl = imageName;
+                //model.ImageUrl = imageName;
+                using var straem = model.Image.OpenReadStream();
+
+                var imageParams = new ImageUploadParams
+                {
+                    File = new FileDescription(imageName, straem),
+                    UseFilename = true
+                };
+
+                var result = await _cloudinary.UploadAsync(imageParams);
+
+                model.ImageUrl = result.SecureUrl.ToString();
+                imagePublicId = result.PublicId;
             }
 
             else if (!string.IsNullOrEmpty(book.ImageUrl))
@@ -155,13 +183,15 @@ namespace Bookify.Web.Controllers
 
             book = _mapper.Map(model, book);
             book.LastUpdatedOn = DateTime.Now;
+            book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl!);
+            book.ImagePublicId = imagePublicId;
 
             foreach (var category in model.SelectedCategories)
                 book.Categories.Add(new BookCategory { CategoryId = category });
 
             _context.SaveChanges();
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new {id = book.Id});
         }
         private BookFromViewModel PopulateViewModel(BookFromViewModel? model = null)
         {
