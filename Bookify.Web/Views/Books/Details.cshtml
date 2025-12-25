@@ -10,13 +10,13 @@
         <div class="card-body pt-9 pb-0">
             <!--begin::Details-->
             <div class="d-flex flex-wrap flex-sm-nowrap mb-6">
-                <!--begin::Image-->
-                <div class="d-flex flex-center flex-shrink-0 bg-light rounded w-100px h-100px w-lg-150px h-lg-150px me-7 mb-4">
-                    <a data-fslightbox href="@Model.ImageUrl">
-                        <img class="mw-50px mw-lg-75px" src="@Model.ImageThumbnailUrl" alt="@Model.Title" />
+                <div class="d-flex flex-center flex-shrink-0 bg-light rounded w-100px h-100px w-lg-150px h-lg-150px me-7 mb-4 overflow-hidden p-1">
+                    <a data-fslightbox href="@Model.ImageUrl" class="d-block w-100 h-100">
+                        <img class="w-100 h-100 object-fit-cover rounded"
+                             src="@Model.ImageThumbnailUrl"
+                             alt="@Model.Title" />
                     </a>
                 </div>
-                <!--end::Image-->
                 <!--begin::Wrapper-->
                 <div class="flex-grow-1">
                     <!--begin::Head-->
@@ -179,3 +179,9 @@
     </div>
 </div>
 
+
+
+@section Plugins
+{
+    <script src="~/assets/plugins/fslightbox/fslightbox.bundle.js"></script>
+}

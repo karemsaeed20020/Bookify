@@ -143,6 +143,15 @@ var KTDatatables = function () {
 $(document).ready(function () {
     // disable submit buttons on form submit
     $('form').on('submit', function () {
+        if ($('.js-tinymce').length > 0) {
+            $('.js-tinymce').each(function () {
+                var input = $(this);
+                var content = tinymce.get(input.attr('id')).getContent();
+                input.val(content);
+            });
+
+            
+        }
         var isValid = $(this).valid();
         if (isValid) disbableSubmitButtons();
     });

@@ -16,6 +16,8 @@ namespace Bookify.Web.Core.Models
         public DateTime PublishingDate { get; set; }
         public string? ImageUrl { get; set; }
         public string? ImageThumbnailUrl { get; set; }
+        public string? ImagePublicId { get; set; }
+
         public bool IsAvailableForRental { get; set; }
         [MaxLength(50)]
         public string Hall { get; set; } = null!;
