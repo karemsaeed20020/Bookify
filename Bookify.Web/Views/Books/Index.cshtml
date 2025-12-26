@@ -83,12 +83,17 @@
 {
     <script>
         $(document).ready(function() {
-            $('#Books').DataTable({
+            $('[data-kt-filter="search"]').on('keyup', function() {
+                var input = $(this);
+                datatable.search(input.val()).draw();
+            })
+            datatable = $('#Books').DataTable({
                 serverSide: true,
                 ajax: {
                     url:'/Books/GetBooks',
                    type: 'POST',
                 },
+                order: [[1, 'asc']],
                 columnsDefs: [
                     { targets: 0, visible: false, searchable: false}
                 ],

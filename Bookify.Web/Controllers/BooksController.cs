@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Linq.Dynamic.Core;
 
 namespace Bookify.Web.Controllers
 {
@@ -66,12 +67,35 @@ namespace Bookify.Web.Controllers
         {
             var skip = int.Parse(Request.Form["start"]);
             var pageSize = int.Parse(Request.Form["length"]);
-            IQueryable<Book> books = _context.Books;
-            var data = books.Skip(skip).Take(pageSize);
+
+            var searchValue = Request.Form["search[value]"];
+
+            var sortColumnIndex = Request.Form["order[0][column]"];
+            var sortColumn = Request.Form[$"columns[{sortColumnIndex}][name]"];
+            var sortColumnDirection = Request.Form["order[0][dir]"];
+
+            IQueryable<Book> books = _context.Books
+                .Include(b => b.Author)
+                .Include(b => b.Categories)
+                .ThenInclude(c => c.Category);
+
+            if (!string.IsNullOrEmpty(searchValue))
+                books = books.Where(b => b.Title.Contains(searchValue) || b.Author!.Name.Contains(searchValue));
+
+            books = books.OrderBy($"{sortColumn} {sortColumnDirection}");
+
+            var data = books.Skip(skip).Take(pageSize).ToList();
+
+            var mappedData = _mapper.Map<IEnumerable<BookViewModel>>(data);
+
             var recordsTotal = books.Count();
-            var jsonData = new { recordsFiltered = recordsTotal, recordsTotal,data};
+
+            var jsonData = new { recordsFiltered = recordsTotal, recordsTotal, data = mappedData };
+
             return Ok(jsonData);
         }
+
+
         [HttpPost]
         [AutoValidateAntiforgeryToken]
         public async Task<IActionResult> Create(BookFromViewModel model)
