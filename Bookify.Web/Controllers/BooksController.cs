@@ -2,9 +2,11 @@
 using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
 using Bookify.Web.Core.ViewModels;
+using Bookify.Web.Filters;
 using Bookify.Web.Settings;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +59,18 @@ namespace Bookify.Web.Controllers
         {
             
             return View("Form", PopulateViewModel());
+        }
+
+        [HttpPost]
+        public IActionResult GetBooks()
+        {
+            var skip = int.Parse(Request.Form["start"]);
+            var pageSize = int.Parse(Request.Form["length"]);
+            IQueryable<Book> books = _context.Books;
+            var data = books.Skip(skip).Take(pageSize);
+            var recordsTotal = books.Count();
+            var jsonData = new { recordsFiltered = recordsTotal, recordsTotal,data};
+            return Ok(jsonData);
         }
         [HttpPost]
         [AutoValidateAntiforgeryToken]
