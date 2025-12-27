@@ -106,7 +106,23 @@
                
                 columns: [
                     {"data": "id", "name": "Id", "className": "d-none"},
-                    {"data": "title", "name": "Title"}
+                    {
+                "name": "Title",
+                "className": "d-flex align-items-center",
+                "render": function (data, type, row) {
+                    return `<div class="symbol symbol-50px overflow-hidden me-3">
+                                                <a href="/Books/Details/${row.id}">
+                                                    <div class="symbol-label h-70px">
+                                                        <img src="${(row.imageThumbnailUrl === null ? '/images/books/no-book.jpg' : row.imageThumbnailUrl)}" alt="cover" class="w-100">
+                                                    </div>
+                                                </a>
+                                            </div>
+                                            <div class="d-flex flex-column">
+                                                <a href="/Books/Details/${row.id}" class="text-primary fw-bolder mb-1">${row.title}</a>
+                                                <span>${row.author}</span>
+                                            </div>`;
+                }
+            },
                 ]
             })
         })
