@@ -242,7 +242,22 @@ namespace Bookify.Web.Controllers
             
             return viewModel;
         }
-        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ToggleStatus(int id)
+        {
+            var book = _context.Books.Find(id);
+
+            if (book is null)
+                return NotFound();
+
+            book.IsDeleted = !book.IsDeleted;
+            book.LastUpdatedOn = DateTime.Now;
+
+            _context.SaveChanges();
+
+            return Ok();
+        }
         public IActionResult AllowItem(BookFromViewModel model)
         {
             var book = _context.Books.SingleOrDefault(b => b.Title == model.Title && b.AuthorId == model.AuthorId);
