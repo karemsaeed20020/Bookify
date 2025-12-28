@@ -24,6 +24,7 @@
         public string Description { get; set; } = null!;
 
         public IEnumerable<string> Categories { get; set; } = null!;
+        public IEnumerable<BookCopy> Copies { get; set; } = null!;
 
         public bool IsDeleted { get; set; }
 
