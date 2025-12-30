@@ -1,4 +1,5 @@
 using Bookify.Web.Core.Mapping;
+using Bookify.Web.Core.Models;
 using Bookify.Web.Data;
 using Bookify.Web.Settings;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +21,7 @@ namespace Bookify.Web
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+            builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             builder.Services.AddControllersWithViews();
             builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
