@@ -1,17 +1,19 @@
 using Bookify.Web.Core.Mapping;
 using Bookify.Web.Core.Models;
 using Bookify.Web.Data;
+using Bookify.Web.Seeds;
 using Bookify.Web.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Configuration;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Bookify.Web
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -21,8 +23,12 @@ namespace Bookify.Web
                 options.UseSqlServer(connectionString));
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+            //builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+            //    .AddEntityFrameworkStores<ApplicationDbContext>();
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultUI()
+            .AddDefaultTokenProviders();
             builder.Services.AddControllersWithViews();
             builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
             builder.Services.Configure<CloudinarySettings>(
@@ -39,8 +45,19 @@ namespace Bookify.Web
                 app.UseExceptionHandler("/Home/Error");
             }
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
+
+            var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+
+            using var scope = scopeFactory.CreateScope();
+
+            var roleManger = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userManger = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+            await DefaultRoles.SeedAsync(roleManger);
+            await DefaultUsers.SeedAdminUserAsync(userManger);
+
 
             app.MapStaticAssets();
             app.MapControllerRoute(
