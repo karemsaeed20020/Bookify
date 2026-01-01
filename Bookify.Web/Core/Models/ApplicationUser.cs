@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Web.Core.Models
 {
+    [Index(nameof(Email), IsUnique = true)]
+    [Index(nameof(UserName), IsUnique = true)]
     public class ApplicationUser : IdentityUser
     {
         [MaxLength(100)]
@@ -17,4 +20,5 @@ namespace Bookify.Web.Core.Models
 
         public DateTime? LastUpdatedOn { get; set; }
     }
+
 }
