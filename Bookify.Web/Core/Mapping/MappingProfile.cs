@@ -33,6 +33,13 @@ namespace Bookify.Web.Core.Mapping
                 .ForMember(dest => dest.Categories,
                     opt => opt.MapFrom(src => src.Categories.Select(c => c.Category!.Name).ToList()));
 
+            // BookCopies
+            CreateMap<BookCopy, BookCopyViewModel>()
+               .ForMember(dest => dest.BookTitle, opt => opt.MapFrom(src => src.Book!.Title));
+
+            // Users
+            CreateMap<ApplicationUser, UserViewModel>();
+
         }
     }
 }
