@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
 using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
+using Bookify.Web.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.Web.Controllers
@@ -12,10 +14,12 @@ namespace Bookify.Web.Controllers
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IMapper _mapper;
-        public UsersController(UserManager<ApplicationUser> userManager, IMapper mapper)
+        public UsersController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager,IMapper mapper)
         {
             _userManager = userManager;
+            _roleManager = roleManager;
             _mapper = mapper;
         }
         public async Task<IActionResult> Index()
@@ -23,6 +27,17 @@ namespace Bookify.Web.Controllers
             var users = await _userManager.Users.ToListAsync();
             var viewModel = _mapper.Map<IEnumerable<UserViewModel>>(users);
             return View(viewModel);
+        }
+
+        [HttpGet]
+        [AjaxOnly]
+        public async Task<IActionResult> Create()
+        {
+            var viewModel = new UserFormViewModel
+            {
+                Roles = await _roleManager.Roles.Select(r => new SelectListItem { Text = r.Name, Value = r.Name }).ToListAsync()
+            };
+            return PartialView("_Form", viewModel);
         }
     }
 }

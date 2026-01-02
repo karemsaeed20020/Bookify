@@ -1,7 +1,9 @@
-﻿var datatable;
+﻿// ========== GLOBAL VARIABLES ==========
+var datatable;
 var updatedRow;
 var exportedCols = [];
 
+// ========== HELPER FUNCTIONS ==========
 function showSuccessMessage(message = 'Saved successfully!') {
     Swal.fire({
         icon: 'success',
@@ -24,12 +26,14 @@ function showErrorMessage(message = 'Something went wrong!') {
     });
 }
 
-function disbableSubmitButtons() {
+function disableSubmitButtons() {
     $('body :submit').attr("disabled", "disabled")
 }
+
 function onModalBegin() {
-    disbableSubmitButtons();
+    disableSubmitButtons();
 }
+
 function onModalSuccess(row) {
     showSuccessMessage();
     $('#Modal').modal('hide');
@@ -46,117 +50,119 @@ function onModalSuccess(row) {
     KTMenu.initHandlers();
 }
 
-//DataTables
-var headers = $('th');
-$.each(headers, function (i) {
-    if (!$(this).hasClass('js-no-export'))
-        exportedCols.push(i);
-});
+function onModalComplete() {
+    $('body :submit').removeAttr('disabled').removeAttr('data-kt-indicator');
+}
 
-// Class definition
-var KTDatatables = function () {
-    // Private functions
-    var initDatatable = function () {
-        // Init datatable --- more info on datatables: https://datatables.net/manual/
-        datatable = $(table).DataTable({
-            "info": false,
-            'pageLength': 10,
-        });
-    }
+// ========== SELECT2 FUNCTIONS ==========
+function applySelect2() {
+    console.log('Applying Select2...');
 
-    // Hook export buttons
-    var exportButtons = () => {
-        const documentTitle = $('.js-datatables').data('document-title');
-        var buttons = new $.fn.dataTable.Buttons(table, {
-            buttons: [
-                {
-                    extend: 'copyHtml5',
-                    title: documentTitle,
-                    exportOptions: {
-                        columns: exportedCols
-                    }
-                },
-                {
-                    extend: 'excelHtml5',
-                    title: documentTitle,
-                    exportOptions: {
-                        columns: exportedCols
-                    }
-                },
-                {
-                    extend: 'csvHtml5',
-                    title: documentTitle,
-                    exportOptions: {
-                        columns: exportedCols
-                    }
-                },
-                {
-                    extend: 'pdfHtml5',
-                    title: documentTitle,
-                    exportOptions: {
-                        columns: exportedCols
-                    }
-                }
-            ]
-        }).container().appendTo($('#kt_datatable_example_buttons'));
+    // Initialize Select2 on page load
+    $('.js-select2').select2({
+        width: '100%',
+        placeholder: "Select an option",
+        allowClear: true
+    });
 
-        // Hook dropdown menu click event to datatable export buttons
-        const exportButtons = document.querySelectorAll('#kt_datatable_example_export_menu [data-kt-export]');
-        exportButtons.forEach(exportButton => {
-            exportButton.addEventListener('click', e => {
-                e.preventDefault();
+    // Fix validation
+    $('.js-select2').on('select2:select', function (e) {
+        $('form').not('#SignOut').validate().element('#' + $(this).attr('id'));
+    });
 
-                // Get clicked export value
-                const exportValue = e.target.getAttribute('data-kt-export');
-                const target = document.querySelector('.dt-buttons .buttons-' + exportValue);
+    console.log('Select2 applied to', $('.js-select2').length, 'elements');
+}
 
-                // Trigger click event on hidden datatable export buttons
-                target.click();
-            });
-        });
-    }
+// Initialize Select2 in modal (AFTER content loads)
+function initializeSelect2InModal() {
+    console.log('Initializing Select2 in modal...');
 
-    // Search Datatable --- official docs reference: https://datatables.net/reference/api/search()
-    var handleSearchDatatable = () => {
-        const filterSearch = document.querySelector('[data-kt-filter="search"]');
-        filterSearch.addEventListener('keyup', function (e) {
-            datatable.search(e.target.value).draw();
-        });
-    }
+    var selectElement = $('#Modal .js-select2');
+    console.log('Found select elements in modal:', selectElement.length);
 
-    // Public methods
-    return {
-        init: function () {
-            table = document.querySelector('.js-datatables');
-
-            if (!table) {
-                return;
+    if (selectElement.length > 0) {
+        // Destroy any existing Select2 instances
+        try {
+            if (selectElement.hasClass('select2-hidden-accessible')) {
+                selectElement.select2('destroy');
+                console.log('Destroyed existing Select2 instance');
             }
-
-            initDatatable();
-            exportButtons();
-            handleSearchDatatable();
+        } catch (e) {
+            console.log('No existing Select2 to destroy');
         }
-    };
-}();
 
+        // Re-initialize with modal as parent
+        selectElement.select2({
+            width: '100%',
+            placeholder: "Select roles",
+            allowClear: true,
+            dropdownParent: $('#Modal') // CRITICAL for modals
+        });
+
+        console.log('Select2 initialized in modal');
+    }
+}
+
+// ========== DATATABLES FUNCTIONS ==========
+function initDataTables() {
+    var table = $('.js-datatables');
+
+    if (table.length === 0) {
+        console.log('No DataTables found');
+        return;
+    }
+
+    console.log('Initializing DataTables...');
+
+    // Get exportable columns
+    var headers = $('th');
+    exportedCols = [];
+    $.each(headers, function (i) {
+        if (!$(this).hasClass('js-no-export'))
+            exportedCols.push(i);
+    });
+
+    // Initialize DataTable
+    datatable = table.DataTable({
+        "info": false,
+        'pageLength': 10,
+        "order": [[0, 'asc']],
+        "language": {
+            "emptyTable": "No data found",
+            "zeroRecords": "No matching records found"
+        }
+    });
+
+    // Search functionality
+    $('[data-kt-filter="search"]').on('keyup', function () {
+        datatable.search(this.value).draw();
+    });
+
+    console.log('DataTables initialized');
+}
+
+// ========== MAIN DOCUMENT READY ==========
 $(document).ready(function () {
-    // disable submit buttons on form submit
+    console.log('Document ready - initializing...');
+
+    // 1. Disable submit buttons on form submit
     $('form').not('#SignOut').on('submit', function () {
+        // Handle TinyMCE if present
         if ($('.js-tinymce').length > 0) {
             $('.js-tinymce').each(function () {
                 var input = $(this);
                 var content = tinymce.get(input.attr('id')).getContent();
                 input.val(content);
             });
-
-            
         }
+
         var isValid = $(this).valid();
-        if (isValid) disbableSubmitButtons();
+        if (isValid) disableSubmitButtons();
     });
-    //TinyMCE
+
+    // 2. Initialize TinyMCE (if needed)
     if ($('.js-tinymce').length > 0) {
+        console.log('Initializing TinyMCE...');
         var options = { selector: ".js-tinymce", height: "422" };
 
         if (KTThemeMode.getMode() === "dark") {
@@ -166,34 +172,35 @@ $(document).ready(function () {
 
         tinymce.init(options);
     }
- 
-    //Select2
-    $('.js-select2').select2();
-    $('.js-select2').on('select2:select', function (e) {
-        $("form").validate().element("#"+ $(this).attr("id"));
-    });
 
-    //Datepicker
-    $('.js-datepicker').daterangepicker({
-        singleDatePicker: true,
-        autoApply: true,
-        drops: 'up',
-        maxDate: new Date()
-    });
+    // 3. Initialize Select2
+    applySelect2();
 
+    // 4. Initialize Datepicker
+    if ($('.js-datepicker').length > 0) {
+        console.log('Initializing Datepicker...');
+        $('.js-datepicker').daterangepicker({
+            singleDatePicker: true,
+            autoApply: true,
+            drops: 'up',
+            maxDate: new Date()
+        });
+    }
 
+    // 5. Show success message if any
     var message = $('#Message').text();
     if (message !== '') {
         showSuccessMessage(message);
     }
 
-    //DataTables Initialization
-    KTUtil.onDOMContentLoaded(function () {
-        KTDatatables.init();
-    });
+    // 6. Initialize DataTables
+    initDataTables();
 
-    //Handle bootstrap modal
-    $('body').delegate('.js-render-modal', 'click', function () {
+    // ========== MODAL HANDLING ==========
+    // Handle modal open
+    $('body').on('click', '.js-render-modal', function () {
+        console.log('Modal button clicked');
+
         var btn = $(this);
         var modal = $('#Modal');
 
@@ -201,25 +208,45 @@ $(document).ready(function () {
 
         if (btn.data('update') !== undefined) {
             updatedRow = btn.parents('tr');
-            console.log(updatedRow);
+            console.log('Update mode for row:', updatedRow);
         }
 
+        // Load form via AJAX
         $.get({
             url: btn.data('url'),
             success: function (form) {
+                console.log('Form loaded successfully');
                 modal.find('.modal-body').html(form);
+
+                // Re-parse validation
                 $.validator.unobtrusive.parse(modal);
+
+                // RE-INITIALIZE SELECT2 IN MODAL (CRITICAL!)
+                setTimeout(function () {
+                    initializeSelect2InModal();
+                }, 100);
             },
-            error: function () {
-                showErrorMessage();
+            error: function (xhr, status, error) {
+                console.error('Error loading form:', error);
+                showErrorMessage('Failed to load form');
             }
         });
 
+        // Show modal
         modal.modal('show');
+
+        // Also initialize Select2 when modal is fully shown
+        modal.on('shown.bs.modal', function () {
+            console.log('Modal fully shown, initializing Select2...');
+            setTimeout(function () {
+                initializeSelect2InModal();
+            }, 300);
+        });
     });
 
-    //Handle Toggle Status with SweetAlert
-    $('body').delegate('.js-toggle-status', 'click', function () {
+    // ========== TOGGLE STATUS ==========
+    $('body').on('click', '.js-toggle-status', function (e) {
+        e.preventDefault();
         var btn = $(this);
         var row = btn.parents('tr');
         var currentStatus = row.find('.js-status').text().trim();
@@ -227,7 +254,7 @@ $(document).ready(function () {
 
         Swal.fire({
             title: 'Are you sure?',
-            text: `You want to change status from ${currentStatus} to ${newStatus}?`,
+            text: `Change status from ${currentStatus} to ${newStatus}?`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, toggle it!',
@@ -246,7 +273,6 @@ $(document).ready(function () {
                     },
                     success: function (lastUpdatedOn) {
                         var status = row.find('.js-status');
-
                         status.text(newStatus);
 
                         if (newStatus === 'Available') {
@@ -255,13 +281,11 @@ $(document).ready(function () {
                             status.removeClass('badge-light-success').addClass('badge-light-danger');
                         }
 
-                        // Update last updated timestamp
+                        // Update timestamp
                         row.find('.js-updated-on').html(lastUpdatedOn);
 
                         // Add animation
                         row.addClass('animate__animated animate__flash');
-
-                        // Remove animation after it completes
                         setTimeout(function () {
                             row.removeClass('animate__animated animate__flash');
                         }, 1000);
@@ -269,14 +293,17 @@ $(document).ready(function () {
                         showSuccessMessage('Status updated successfully!');
                     },
                     error: function () {
-                        showErrorMessage('Failed to update status. Please try again.');
+                        showErrorMessage('Failed to update status');
                     }
                 });
             }
         });
     });
-    //Hanlde signout
+
+    // ========== SIGNOUT ==========
     $('.js-signout').on('click', function () {
         $('#SignOut').submit();
     });
+
+    console.log('Initialization complete');
 });
