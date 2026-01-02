@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Bookify.Web.Controllers
 {
@@ -38,6 +39,30 @@ namespace Bookify.Web.Controllers
                 Roles = await _roleManager.Roles.Select(r => new SelectListItem { Text = r.Name, Value = r.Name }).ToListAsync()
             };
             return PartialView("_Form", viewModel);
+        }
+        [HttpPost]
+        [AutoValidateAntiforgeryToken]
+        public async Task<IActionResult> Create(UserFormViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            ApplicationUser user = new()
+            {
+                FullName = model.FullName,
+                UserName = model.UserName,
+                Email = model.Email,
+                CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value
+            };
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRolesAsync(user, model.SelectedRoles);
+                var viewModel = _mapper.Map<UserViewModel>(user);
+                return PartialView("_UserRow", viewModel);
+            }
+            return BadRequest();
         }
     }
 }

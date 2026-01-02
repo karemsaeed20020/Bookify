@@ -12,7 +12,9 @@
         public const string NotAllowFutureDates = "Date cannot be in the future!";
         public const string InvalidRange = "{0} should be between {1} and {2}!";
         public const string ConfirmPasswordNotMatch = "The password and confirmation password do not match.";
-        
+        public const string WeakPassword = "Passwords contain an uppercase character, lowercase character, a digit, and a non-alphanumeric character. Passwords must be at least 8 characters long";
+
+
 
     }
 }
