@@ -13,8 +13,11 @@
         public const string InvalidRange = "{0} should be between {1} and {2}!";
         public const string ConfirmPasswordNotMatch = "The password and confirmation password do not match.";
         public const string WeakPassword = "Passwords contain an uppercase character, lowercase character, a digit, and a non-alphanumeric character. Passwords must be at least 8 characters long";
-
-
+        public const string InvalidUsername = "Username can only contain letters or digits.";
+        public const string OnlyEnglishLetters = "Only English letters are allowed.";
+        public const string OnlyArabicLetters = "Only Arabic letters are allowed.";
+        public const string OnlyNumbersAndLetters = "Only Arabic/English letters or digits are allowed.";
+        public const string DenySpecialCharacters = "Special characters are not allowed.";
 
     }
 }

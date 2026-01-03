@@ -62,7 +62,92 @@ namespace Bookify.Web.Controllers
                 var viewModel = _mapper.Map<UserViewModel>(user);
                 return PartialView("_UserRow", viewModel);
             }
-            return BadRequest();
+            return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
+
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user is null)
+                return NotFound();
+
+            user.IsDeleted = !user.IsDeleted;
+            user.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            user.LastUpdatedOn = DateTime.Now;
+
+            await _userManager.UpdateAsync(user);
+
+            return Ok(user.LastUpdatedOn.ToString());
+        }
+        [HttpGet]
+        [AjaxOnly]
+        public async Task<IActionResult> ResetPassword(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user is null)
+                return NotFound();
+
+            var viewModel = new ResetPasswordFormViewModel { Id = user.Id };
+
+            return PartialView("_ResetPasswordForm", viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordFormViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var user = await _userManager.FindByIdAsync(model.Id);
+
+            if (user is null)
+                return NotFound();
+
+            var currentPasswordHash = user.PasswordHash;
+
+            await _userManager.RemovePasswordAsync(user);
+
+            var result = await _userManager.AddPasswordAsync(user, model.Password);
+
+            if (result.Succeeded)
+            {
+                user.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+                user.LastUpdatedOn = DateTime.Now;
+
+                await _userManager.UpdateAsync(user);
+
+                var viewModel = _mapper.Map<UserViewModel>(user);
+                return PartialView("_UserRow", viewModel);
+            }
+
+            user.PasswordHash = currentPasswordHash;
+            await _userManager.UpdateAsync(user);
+
+            return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
+        }
+
+
+        public async Task<IActionResult> AllowUserName(UserFormViewModel model)
+        {
+            var user = await _userManager.FindByNameAsync(model.UserName);
+            var isAllowed = user is null || user.Id.Equals(model.Id);
+
+            return Json(isAllowed);
+        }
+
+        public async Task<IActionResult> AllowEmail(UserFormViewModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            var isAllowed = user is null || user.Id.Equals(model.Id);
+
+            return Json(isAllowed);
+        }
+
     }
 }
