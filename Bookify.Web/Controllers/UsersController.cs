@@ -17,12 +17,15 @@ namespace Bookify.Web.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IMapper _mapper;
-        public UsersController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager,IMapper mapper)
+
+        public UsersController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IMapper mapper)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _mapper = mapper;
         }
+
+
         public async Task<IActionResult> Index()
         {
             var users = await _userManager.Users.ToListAsync();
@@ -36,18 +39,25 @@ namespace Bookify.Web.Controllers
         {
             var viewModel = new UserFormViewModel
             {
-                Roles = await _roleManager.Roles.Select(r => new SelectListItem { Text = r.Name, Value = r.Name }).ToListAsync()
+                Roles = await _roleManager.Roles
+                                .Select(r => new SelectListItem
+                                {
+                                    Text = r.Name,
+                                    Value = r.Name
+                                })
+                                .ToListAsync()
             };
+
             return PartialView("_Form", viewModel);
         }
+
         [HttpPost]
-        [AutoValidateAntiforgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(UserFormViewModel model)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest();
-            }
+
             ApplicationUser user = new()
             {
                 FullName = model.FullName,
@@ -55,34 +65,80 @@ namespace Bookify.Web.Controllers
                 Email = model.Email,
                 CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value
             };
+
             var result = await _userManager.CreateAsync(user, model.Password);
+
             if (result.Succeeded)
             {
                 await _userManager.AddToRolesAsync(user, model.SelectedRoles);
+
                 var viewModel = _mapper.Map<UserViewModel>(user);
                 return PartialView("_UserRow", viewModel);
             }
-            return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
 
+            return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleStatus(string id)
+        [HttpGet]
+        [AjaxOnly]
+        public async Task<IActionResult> Edit(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
 
             if (user is null)
                 return NotFound();
 
-            user.IsDeleted = !user.IsDeleted;
+            var viewModel = _mapper.Map<UserFormViewModel>(user);
+
+            viewModel.SelectedRoles = await _userManager.GetRolesAsync(user);
+            viewModel.Roles = await _roleManager.Roles
+                                .Select(r => new SelectListItem
+                                {
+                                    Text = r.Name,
+                                    Value = r.Name
+                                })
+                                .ToListAsync();
+
+            return PartialView("_Form", viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(UserFormViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest();
+
+            var user = await _userManager.FindByIdAsync(model.Id);
+
+            if (user is null)
+                return NotFound();
+
+            user = _mapper.Map(model, user);
             user.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             user.LastUpdatedOn = DateTime.Now;
 
-            await _userManager.UpdateAsync(user);
+            var result = await _userManager.UpdateAsync(user);
 
-            return Ok(user.LastUpdatedOn.ToString());
+            if (result.Succeeded)
+            {
+                var currentRoles = await _userManager.GetRolesAsync(user);
+
+                var rolesUpdated = !currentRoles.SequenceEqual(model.SelectedRoles);
+
+                if (rolesUpdated)
+                {
+                    await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    await _userManager.AddToRolesAsync(user, model.SelectedRoles);
+                }
+
+                var viewModel = _mapper.Map<UserViewModel>(user);
+                return PartialView("_UserRow", viewModel);
+            }
+
+            return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
         }
+
         [HttpGet]
         [AjaxOnly]
         public async Task<IActionResult> ResetPassword(string id)
@@ -132,6 +188,23 @@ namespace Bookify.Web.Controllers
             return BadRequest(string.Join(',', result.Errors.Select(e => e.Description)));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user is null)
+                return NotFound();
+
+            user.IsDeleted = !user.IsDeleted;
+            user.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+            user.LastUpdatedOn = DateTime.Now;
+
+            await _userManager.UpdateAsync(user);
+
+            return Ok(user.LastUpdatedOn.ToString());
+        }
 
         public async Task<IActionResult> AllowUserName(UserFormViewModel model)
         {
@@ -148,6 +221,5 @@ namespace Bookify.Web.Controllers
 
             return Json(isAllowed);
         }
-
     }
 }

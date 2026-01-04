@@ -23,6 +23,7 @@ namespace Bookify.Web.Core.Mapping
                 .ForMember(dest => dest.Value, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.Text, opt => opt.MapFrom(src => src.Name));
 
+
             //Books
             CreateMap<BookFromViewModel, Book>()
                 .ReverseMap()
@@ -39,6 +40,11 @@ namespace Bookify.Web.Core.Mapping
 
             // Users
             CreateMap<ApplicationUser, UserViewModel>();
+            CreateMap<UserFormViewModel, ApplicationUser>()
+                .ForMember(dest => dest.NormalizedEmail, opt => opt.MapFrom(src => src.Email.ToUpper()))
+                .ForMember(dest => dest.NormalizedUserName, opt => opt.MapFrom(src => src.UserName.ToUpper()))
+                .ReverseMap();
+
 
         }
     }
