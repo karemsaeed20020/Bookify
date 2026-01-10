@@ -42,6 +42,14 @@ namespace Bookify.Web
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
                 options.Lockout.MaxFailedAccessAttempts = 2;
             });
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.Name = "Auth.Cookie";
+                options.LoginPath = "/Identity/Account/Login";
+                options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+                options.SlidingExpiration = true; // Reset expiration on activity
+                options.ExpireTimeSpan = TimeSpan.FromDays(30); // Absolute expiration
+            });
             builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, Helpers.ApplicationUserClaimsPrincipalFactory>();
             var app = builder.Build();
 
