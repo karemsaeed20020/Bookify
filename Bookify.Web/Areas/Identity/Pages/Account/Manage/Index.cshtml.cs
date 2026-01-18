@@ -2,14 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
+using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 namespace Bookify.Web.Areas.Identity.Pages.Account.Manage
 {
@@ -56,8 +57,14 @@ namespace Bookify.Web.Areas.Identity.Pages.Account.Manage
             ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
+            /// 
+            [Required, MaxLength(100, ErrorMessage = Errors.MaxLength), Display(Name = "Full Name"),
+           RegularExpression(RegexPatterns.CharactersOnly_Eng, ErrorMessage = Errors.OnlyEnglishLetters)]
+            public string FullName { get; set; } = null!;
             [Phone]
-            [Display(Name = "Phone number")]
+            [Display(Name = "Phone number"), MaxLength(11, ErrorMessage = Errors.MaxLength),
+                RegularExpression(RegexPatterns.MobileNumber, ErrorMessage = Errors.InvalidMobileNumber)]
+
             public string PhoneNumber { get; set; }
         }
 
@@ -70,6 +77,7 @@ namespace Bookify.Web.Areas.Identity.Pages.Account.Manage
 
             Input = new InputModel
             {
+                FullName = user.FullName,
                 PhoneNumber = phoneNumber
             };
         }
@@ -110,6 +118,17 @@ namespace Bookify.Web.Areas.Identity.Pages.Account.Manage
                     return RedirectToPage();
                 }
             }
+            if (Input.FullName != user.FullName)
+            {
+                user.FullName = Input.FullName;
+                var setFullName = await _userManager.UpdateAsync(user);
+                if (!setFullName.Succeeded)
+                {
+                    StatusMessage = "Unexpected error when trying to set full name.";
+                    return RedirectToPage();
+                }
+            }
+
 
             await _signInManager.RefreshSignInAsync(user);
             StatusMessage = "Your profile has been updated";
