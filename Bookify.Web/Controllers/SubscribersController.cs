@@ -58,6 +58,7 @@ namespace Bookify.Web.Controllers
             var subscriber = _context.Subscripers
                 .Include(s => s.Governorate)
                 .Include(s => s.Area)
+                .Include(S => S.Subscriptions)
                 .SingleOrDefault(s => s.Id == subscriberId);
 
             if (subscriber is null)
@@ -93,6 +94,16 @@ namespace Bookify.Web.Controllers
             Subscriber.ImageUrl = $"{imagePath}/{imageName}";
             Subscriber.ImageThumbnailUrl = $"{imagePath}/thumb/{imageName}";
             Subscriber.CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+            Subscription subscription = new()
+            {
+                CreatedById = Subscriber.CreatedById,
+                CreatedOn = Subscriber.CreatedOn,
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today.AddYears(1),
+            };
+
+            Subscriber.Subscriptions.Add(subscription);
 
             _context.Add(Subscriber);
             _context.SaveChanges();
@@ -159,6 +170,36 @@ namespace Bookify.Web.Controllers
             _context.SaveChanges();
 
             return RedirectToAction(nameof(Details), new { id = model.Key });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RenewSubscription(string sKey)
+        {
+            var subscriberId = int.Parse(_dataProtector.Unprotect(sKey));
+            var subscriber = _context.Subscripers.Include(s => s.Subscriptions)
+                .SingleOrDefault(s => s.Id == subscriberId);
+
+            if (subscriber is null)
+                return NotFound();
+            if (subscriber.IsBlackListed)
+                return BadRequest();
+
+            var lastSubscription = subscriber.Subscriptions.Last();
+            var startDate = lastSubscription.EndDate < DateTime.Today ? DateTime.Today : lastSubscription.EndDate.AddDays(1);
+
+            Subscription newSubscription = new()
+            {
+                CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value,
+                CreatedOn = DateTime.Now,
+                StartDate = startDate,
+                EndDate = startDate.AddYears(1),
+            };
+            subscriber.Subscriptions.Add(newSubscription);
+            _context.SaveChanges();
+
+            var viewModel = _mapper.Map<SubscriptionViewModel>(newSubscription);
+            return PartialView("_SubscriptionRow", viewModel);
         }
 
         [AjaxOnly]
