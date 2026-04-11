@@ -1,13 +1,18 @@
+using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Mapping;
 using Bookify.Web.Core.Models;
-using Bookify.Web.Data;
+using Bookify.Web.Filters;
 using Bookify.Web.Seeds;
+using Bookify.Web.Services;
 using Bookify.Web.Settings;
+using Hangfire;
+using Hangfire.Dashboard;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using System.Configuration;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace Bookify.Web
 {
@@ -35,13 +40,23 @@ namespace Bookify.Web
             builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
             builder.Services.Configure<CloudinarySettings>(
                            builder.Configuration.GetSection("CloudinarySettings"));
+            builder.Services.Configure<MailSettings>(
+                builder.Configuration.GetSection("MailSettings")
+                );
 
+            builder.Services.AddTransient<IImageService, ImageService>();
+            builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.Configure<IdentityOptions>(options =>
             {
                 options.Password.RequiredLength = 8;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
                 options.Lockout.MaxFailedAccessAttempts = 2;
             });
+            builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+            {
+                options.ValidationInterval = TimeSpan.Zero;
+            });
+            builder.Services.AddDataProtection().SetApplicationName(nameof(Bookify));
             builder.Services.ConfigureApplicationCookie(options =>
             {
                 options.Cookie.Name = "Auth.Cookie";
@@ -51,6 +66,13 @@ namespace Bookify.Web
                 options.ExpireTimeSpan = TimeSpan.FromDays(30); // Absolute expiration
             });
             builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, Helpers.ApplicationUserClaimsPrincipalFactory>();
+            builder.Services.AddHangfire(x => x.UseSqlServerStorage(connectionString));
+            builder.Services.AddHangfireServer();
+            builder.Services.Configure<AuthorizationOptions>(options => options.AddPolicy("adminsOnly", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireRole(AppRoles.Admin);
+            }));
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -84,6 +106,16 @@ namespace Bookify.Web
                 .WithStaticAssets();
             app.MapRazorPages()
                .WithStaticAssets();
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                DashboardTitle = "Bookify Dashboard",
+                IsReadOnlyFunc = (DashboardContext context) => true,
+                Authorization = new IDashboardAuthorizationFilter[]
+                {
+                    new HangfireAuthorizationFilter("adminsOnly")
+                }
+
+            });
 
             app.Run();
         }

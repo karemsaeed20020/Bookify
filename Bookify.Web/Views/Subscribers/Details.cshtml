@@ -4,14 +4,9 @@
 @{
     ViewData["Title"] = "Subscriber Details";
 
-    var lastSubscription = Model.Subscription.LastOrDefault();
-    var subscriberStatus = Model.IsBlackListed
-        ? SubscriberStatus.Banned
-        : lastSubscription == null
-            ? SubscriberStatus.Inactive
-            : lastSubscription.EndDate < DateTime.Today
-                ? SubscriberStatus.Inactive
-                : SubscriberStatus.Active; var statusClass = Model.IsBlackListed ? "danger" : lastSubscription.EndDate < DateTime.Today ? "warning" : "success";
+    var lastSubscription = Model.Subscription.Last();
+    var subscriberStatus = Model.IsBlackListed ? SubscriberStatus.Banned : lastSubscription.EndDate < DateTime.Today ? SubscriberStatus.Inactive : SubscriberStatus.Active;
+    var statusClass = Model.IsBlackListed ? "danger" : lastSubscription.EndDate < DateTime.Today ? "warning" : "success";
 }
 
 <div class="alert bg-light-primary border border-primary border-3 border-dashed d-flex justify-content-between w-100 p-5 mb-10">
@@ -295,7 +290,6 @@
 {
     <script src="~/js/renew.js" asp-append-version="true"></script>
 }
-
 @section Plugins
 {
     <script src="~/assets/plugins/fslightbox/fslightbox.bundle.js"></script><script src="~/bootbox.js/bootbox.js"></script>
