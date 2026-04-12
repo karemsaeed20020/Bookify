@@ -65,6 +65,8 @@ namespace Bookify.Web.Controllers
                 .Include(s => s.Governorate)
                 .Include(s => s.Area)
                 .Include(S => S.Subscriptions)
+                .Include(s => s.Rentals)
+                .ThenInclude(s => s.RentalCopies)
                 .SingleOrDefault(s => s.Id == subscriberId);
 
             if (subscriber is null)
