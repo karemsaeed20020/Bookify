@@ -3,8 +3,10 @@ using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
 using Bookify.Web.Filters;
 using Bookify.Web.Services;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -19,12 +21,16 @@ namespace Bookify.Web.Controllers
         private readonly IMapper _mapper;
         private readonly IImageService _imageService;
         private readonly IDataProtector _dataProtector;
-        public SubscribersController(ApplicationDbContext context, IMapper mapper, IImageService imageService, IDataProtectionProvider dataProtector)
+        private readonly IEmailSender _emailSender;
+        private readonly IEmailBodyBuilder _emailBodyBuilder;
+        public SubscribersController(ApplicationDbContext context, IMapper mapper, IImageService imageService, IDataProtectionProvider dataProtector, IEmailSender emailSender, IEmailBodyBuilder emailBodyBuilder)
         {
             _context = context;
             _mapper = mapper;
             _imageService = imageService;
             _dataProtector = dataProtector.CreateProtector("MySecureKey");
+            _emailSender = emailSender;
+            _emailBodyBuilder = emailBodyBuilder;
         }
         public IActionResult Index()
         {
@@ -107,6 +113,20 @@ namespace Bookify.Web.Controllers
 
             _context.Add(Subscriber);
             _context.SaveChanges();
+
+            //Send welcome email
+            var placeholders = new Dictionary<string, string>()
+            {
+                { "imageUrl", "https://res.cloudinary.com/devcreed/image/upload/v1668739431/icon-positive-vote-2_jcxdww.svg" },
+                { "header", $"Welcome {model.FirstName}," },
+                { "body", "thanks for joining Bookify 🤩" }
+            };
+
+            var body = _emailBodyBuilder.GetEmailBody(EmailTemplates.Notification, placeholders);
+
+            BackgroundJob.Enqueue(() => _emailSender.SendEmailAsync(
+                model.Email,
+                "Welcome to Bookify", body));
 
             var subsciberId = _dataProtector.Protect(Subscriber.Id.ToString());
 
@@ -197,6 +217,18 @@ namespace Bookify.Web.Controllers
             };
             subscriber.Subscriptions.Add(newSubscription);
             _context.SaveChanges();
+            var placeholders = new Dictionary<string, string>()
+            {
+                { "imageUrl", "https://res.cloudinary.com/devcreed/image/upload/v1668739431/icon-positive-vote-2_jcxdww.svg" },
+                { "header", $"Hello {subscriber.FirstName}," },
+                { "body", $"your subscription has been renewed through {newSubscription.EndDate.ToString("d MMM, yyyy")} 🎉🎉" }
+            };
+
+            var body = _emailBodyBuilder.GetEmailBody(EmailTemplates.Notification, placeholders);
+
+            BackgroundJob.Enqueue(() => _emailSender.SendEmailAsync(
+                subscriber.Email,
+                "Bookify Subscription Renewal", body));
 
             var viewModel = _mapper.Map<SubscriptionViewModel>(newSubscription);
             return PartialView("_SubscriptionRow", viewModel);
@@ -212,6 +244,7 @@ namespace Bookify.Web.Controllers
 
             return Ok(_mapper.Map<IEnumerable<SelectListItem>>(areas));
         }
+
 
         public IActionResult AllowNationalId(SubscriberFormViewModel model)
         {

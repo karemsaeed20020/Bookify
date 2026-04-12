@@ -5,6 +5,7 @@ using Bookify.Web.Filters;
 using Bookify.Web.Seeds;
 using Bookify.Web.Services;
 using Bookify.Web.Settings;
+using Bookify.Web.Tasks;
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,7 @@ namespace Bookify.Web
 
             builder.Services.AddTransient<IImageService, ImageService>();
             builder.Services.AddTransient<IEmailSender, EmailSender>();
+            builder.Services.AddTransient<IEmailBodyBuilder, EmailBodyBuilder>();
             builder.Services.Configure<IdentityOptions>(options =>
             {
                 options.Password.RequiredLength = 8;
@@ -116,7 +118,14 @@ namespace Bookify.Web
                 }
 
             });
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var webHostEnvironment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            var emailBodyBuilder = scope.ServiceProvider.GetRequiredService<IEmailBodyBuilder>();
+            var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
 
+            var hangfireTasks = new HangfireTasks(dbContext, webHostEnvironment, emailSender, emailBodyBuilder);
+
+            RecurringJob.AddOrUpdate(() => hangfireTasks.PrepareExpirationAlert(), "0 14 * * *");
             app.Run();
         }
     }
