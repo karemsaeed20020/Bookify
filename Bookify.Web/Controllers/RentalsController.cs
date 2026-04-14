@@ -39,7 +39,7 @@ namespace Bookify.Web.Controllers
                 return BadRequest(Errors.NotAvilableRental);
 
             var viewModel = _mapper.Map<BookCopyViewModel>(copy);
-            return Ok(viewModel);
+            return PartialView("_CopyDetails", viewModel);
         }
     }
 }
