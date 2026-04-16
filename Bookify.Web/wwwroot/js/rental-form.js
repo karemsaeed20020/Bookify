@@ -16,6 +16,13 @@ $(document).ready(function () {
         }
         $('#SearchForm').submit();
     });
+    $('body').delegate('.js-remove', 'click', function () {
+        $(this).parents('.js-copy-container').remove();
+        PrepareInput();
+
+        if ($.isEmptyObject(selectedCopies))
+            $('#CopiesForm').find(':submit').addClass('d-none');
+    })
 })
 
 function onAddCopySuccess(copy) {
@@ -27,10 +34,16 @@ function onAddCopySuccess(copy) {
         return;
     }
     $('#CopiesForm').prepend(copy);
+    $('#CopiesForm').find(':submit').removeClass('d-none');
+    PrepareInput();
+}    
+
+function PrepareInput() {
     var copies = $('.js-copy');
+    selectedCopies = [];
     $.each(copies, (i, input) => {
         var $input = $(input);
         selectedCopies.push({ serial: $input.val(), bookId: $input.data('book-id') });
         $input.attr('name', `SelectedCopies[${i}]`).attr('id', `SelectedCopies_${i}_`)
     });
-}    
+}

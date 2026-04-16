@@ -26,12 +26,12 @@ function showErrorMessage(message = 'Something went wrong!') {
     });
 }
 
-function disableSubmitButtons() {
-    $('body :submit').attr("disabled", "disabled")
+function disableSubmitButtons(btn) {
+    $(btn).attr("disabled", "disabled")
 }
 
 function onModalBegin() {
-    disableSubmitButtons();
+    disableSubmitButtons($("#Modal").find(':submit'));
 }
 
 function onModalSuccess(row) {
@@ -157,7 +157,7 @@ $(document).ready(function () {
         }
 
         var isValid = $(this).valid();
-        if (isValid) disableSubmitButtons();
+        if (isValid) disableSubmitButtons($(this).find(':submit'));
     });
 
     // 2. Initialize TinyMCE (if needed)

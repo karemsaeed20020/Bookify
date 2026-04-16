@@ -22,6 +22,21 @@ namespace Bookify.Web.Controllers
             _mapper = mapper;
             _dataProtector = dataProtector.CreateProtector("MySecureKey");
         }
+        public IActionResult Details(int id)
+        {
+            var rental = _context.Rental
+                .Include(r => r.RentalCopies)
+                .ThenInclude(c => c.BookCopy)
+                .ThenInclude(c => c!.Book)
+                .SingleOrDefault(r => r.Id == id);
+
+            if (rental is null)
+                return NotFound();
+
+            var viewModel = _mapper.Map<RentalViewModel>(rental);
+
+            return View(viewModel);
+        }
         public IActionResult Create(string sKey)
         {
             var subscriberId = int.Parse(_dataProtector.Unprotect(sKey));
@@ -128,6 +143,26 @@ namespace Bookify.Web.Controllers
 
             var viewModel = _mapper.Map<BookCopyViewModel>(copy);
             return PartialView("_CopyDetails", viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult MarkAsDeleted(int id)
+        {
+            var rental = _context.Rental.Find(id);
+
+            if (rental is null || rental.CreatedOn.Date != DateTime.Today)
+                return NotFound();
+
+            rental.IsDeleted = true;
+            rental.LastUpdatedOn = DateTime.Now;
+            rental.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
+            _context.SaveChanges();
+
+            var copiesCount = _context.RentalCopies.Count(r => r.RentalId == id);
+
+            return Ok(copiesCount);
         }
         private (string errorMessage, int? maxAllowedCopies) ValidateSubscriber(Subscriber subscriber)
         {
