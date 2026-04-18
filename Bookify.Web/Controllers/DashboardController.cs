@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bookify.Web.Core.Models;
+using Bookify.Web.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,58 @@ namespace Bookify.Web.Controllers
             };
 
             return View(viewModel);
+        }
+        [AjaxOnly]
+        public IActionResult GetRentalsPerDay(DateTime? startDate, DateTime? endDate)
+        {
+            startDate ??= DateTime.Today.AddDays(-29);
+            endDate ??= DateTime.Today;
+
+            var data = _context.RentalCopies
+                .Where(c => c.RentalDate >= startDate && c.RentalDate <= endDate)
+                .GroupBy(c => new { Date = c.RentalDate })
+                .Select(g => new ChartItemViewModel
+                {
+                    Label = g.Key.Date.ToString("d MMM"),
+                    Value = g.Count().ToString()
+                })
+                .ToList();
+
+            /*
+			List<ChartItemViewModel> figures = new ();
+
+            for (var day = startDate; day <= endDate; day = day.Value.AddDays(1))
+            {
+                var dayData = data.SingleOrDefault(d => d.Label == day.Value.ToString("d MMM"));
+
+                ChartItemViewModel item = new()
+                {
+                    Label = day.Value.ToString("d MMM"),
+                    Value = dayData is null ? "0" : dayData.Value
+				};
+
+                figures.Add(item);
+            }
+            */
+
+            return Ok(data);
+        }
+
+        [AjaxOnly]
+        public IActionResult GetSubscribersPerCity()
+        {
+            var data = _context.Subscripers
+                .Include(s => s.Governorate)
+                .Where(s => !s.IsDeleted)
+                .GroupBy(s => new { GovernorateName = s.Governorate!.Name })
+                .Select(g => new ChartItemViewModel
+                {
+                    Label = g.Key.GovernorateName,
+                    Value = g.Count().ToString()
+                })
+                .ToList();
+
+            return Ok(data);
         }
     }
 }
