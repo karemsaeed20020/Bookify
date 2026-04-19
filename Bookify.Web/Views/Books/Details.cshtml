@@ -171,10 +171,16 @@
                 <!--begin::Card title-->
                 <div class="card-title fs-3 fw-bold">Copies</div>
                 <!--end::Card title-->
+                <div class="card-toolbar">
+                    <a href="javascript:;" class="btn btn-sm btn-primary js-render-modal" data-title="Add Copy" data-url="/BookCopies/Create?bookId=@Model.Id">
+                        <i class="bi bi-plus-square-dotted"></i>
+                        Add
+                    </a>
+                </div>
             </div>
             <!--end::Card header-->
             <div class="card-body">
-                <table class="table table-row-dashed table-row-gray-300 gy-2 align-middle">
+                <table class="table table-row-dashed table-row-gray-300 gy-2 align-middle js-datatables">
                     <thead>
                         <tr class="fw-bold fs-6 text-gray-400 text-uppercase">
                             <th>Serial Number</th>
@@ -236,7 +242,7 @@
                                 </td>
 
                             </tr>
-                            <p>@copy.SerialNumber</p>
+                            @* <p>@copy.SerialNumber</p> *@
                         }
                     </tbody>
 
@@ -254,4 +260,8 @@
 @section Plugins
 {
     <script src="~/assets/plugins/fslightbox/fslightbox.bundle.js"></script>
+}
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/books-details.js" asp-append-version="true"></script>
 }

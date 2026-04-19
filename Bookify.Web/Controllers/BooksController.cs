@@ -1,65 +1,54 @@
 ﻿using AutoMapper;
 using Bookify.Web.Core.Consts;
 using Bookify.Web.Core.Models;
-using Bookify.Web.Core.ViewModels;
-using Bookify.Web.Filters;
+using Bookify.Web.Services;
 using Bookify.Web.Settings;
 using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
-using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
 using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace Bookify.Web.Controllers
 {
+    [Authorize(Roles = AppRoles.Archive)]
     public class BooksController : Controller
     {
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly Cloudinary _cloudinary;
+        private readonly IImageService _imageService;
 
         private List<string> _allowedExtensions = new() { ".jpg", ".jpeg", ".png" };
         private int _maxAllowedSize = 2097152;
 
-
-        // KEEP ONLY ONE CONSTRUCTOR
-        public BooksController(ApplicationDbContext context, IMapper mapper, IWebHostEnvironment webHostEnvironment, IOptions<CloudinarySettings> cloudinary)
+        public BooksController(ApplicationDbContext context, IMapper mapper,
+            IWebHostEnvironment webHostEnvironment, IOptions<CloudinarySettings> cloudinary,
+            IImageService imageService)
         {
             _context = context;
             _mapper = mapper;
             _webHostEnvironment = webHostEnvironment;
+
             Account account = new()
             {
                 Cloud = cloudinary.Value.Cloud,
                 ApiKey = cloudinary.Value.ApiKey,
                 ApiSecret = cloudinary.Value.ApiSecret
             };
+
             _cloudinary = new Cloudinary(account);
+            _imageService = imageService;
         }
 
         public IActionResult Index()
         {
             return View();
-        }
-        public IActionResult Details(int id)
-        {
-            var book = _context.Books.Include(b => b.Author).Include(b => b.Categories).ThenInclude(c => c.Category).SingleOrDefault(b => b.Id == id);
-            if (book is null)
-            {
-                return NotFound();
-            }
-            var viewModel = _mapper.Map<BookViewModel>(book);
-            return View(viewModel);
-        }
-
-        public IActionResult Create()
-        {
-            
-            return View("Form", PopulateViewModel());
         }
 
         [HttpPost]
@@ -95,66 +84,95 @@ namespace Bookify.Web.Controllers
             return Ok(jsonData);
         }
 
+        public IActionResult Details(int id)
+        {
+            var book = _context.Books
+                .Include(b => b.Author)
+                .Include(b => b.Copies)
+                .Include(b => b.Categories)
+                .ThenInclude(c => c.Category)
+                .SingleOrDefault(b => b.Id == id);
+
+            if (book is null)
+                return NotFound();
+
+            var viewModel = _mapper.Map<BookViewModel>(book);
+
+            return View(viewModel);
+        }
+
+        public IActionResult Create()
+        {
+            return View("Form", PopulateViewModel());
+        }
 
         [HttpPost]
-        [AutoValidateAntiforgeryToken]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(BookFromViewModel model)
         {
-            
             if (!ModelState.IsValid)
-            {
                 return View("Form", PopulateViewModel(model));
-            }
+
             var book = _mapper.Map<Book>(model);
+
             if (model.Image is not null)
             {
-                var extension = Path.GetExtension(model.Image.FileName);
-                if (!_allowedExtensions.Contains(extension))
-                {
-                    ModelState.AddModelError(nameof(model.Image), Errors.NotAllowedExtension);
-                    return View("Form", PopulateViewModel(model));
-                }
-                if (model.Image.Length > _maxAllowedSize)
-                {
-                    ModelState.AddModelError(nameof(model.Image), Errors.MaxSize);
-                    return View("Form", PopulateViewModel(model));
-                }
-                var imageName = $"{Guid.NewGuid()}{extension}";
-                //var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
-                //using var stream = System.IO.File.Create(path);
-                //await model.Image.CopyToAsync(stream);
-                using var stream = model.Image.OpenReadStream();
-                var imageParams = new ImageUploadParams
-                {
-                    File = new FileDescription(imageName, stream),
-                    UseFilename = true
-                };
-                var result = await _cloudinary.UploadAsync(imageParams);
-                book.ImageUrl = result.SecureUrl.ToString();
-                book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl);
-                book.ImagePublicId = result.PublicId;
+                var imageName = $"{Guid.NewGuid()}{Path.GetExtension(model.Image.FileName)}";
+                var imagePath = "/images/books";
 
+                var (isUploaded, errorMessage) = await _imageService.UploadAsync(model.Image, imageName, imagePath, hasThumbnail: true);
+
+                if (!isUploaded)
+                {
+                    ModelState.AddModelError(nameof(Image), errorMessage!);
+                    return View("Form", PopulateViewModel(model));
+
+                }
+
+                book.ImageUrl = $"{imagePath}/{imageName}";
+                book.ImageThumbnailUrl = $"{imagePath}/thumb/{imageName}";
+
+                //using var straem = model.Image.OpenReadStream();
+
+                //var imageParams = new ImageUploadParams
+                //{
+                //    File = new FileDescription(imageName, straem),
+                //    UseFilename = true
+                //};
+
+                //var result = await _cloudinary.UploadAsync(imageParams);
+
+                //book.ImageUrl = result.SecureUrl.ToString();
+                //book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl);
+                //book.ImagePublicId = result.PublicId;
             }
+
+            book.CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
             foreach (var category in model.SelectedCategories)
-            {
-                book.Categories.Add(new BookCategory { CategoryId = category});
-            }
+                book.Categories.Add(new BookCategory { CategoryId = category });
+
             _context.Add(book);
             _context.SaveChanges();
-            return RedirectToAction(nameof(Details), new {id = book.Id});
+
+            return RedirectToAction(nameof(Details), new { id = book.Id });
         }
-        public  IActionResult Edit(int id)
+
+        public IActionResult Edit(int id)
         {
             var book = _context.Books.Include(b => b.Categories).SingleOrDefault(b => b.Id == id);
+
             if (book is null)
-            {
                 return NotFound();
-            }
+
             var model = _mapper.Map<BookFromViewModel>(book);
             var viewModel = PopulateViewModel(model);
+
             viewModel.SelectedCategories = book.Categories.Select(c => c.CategoryId).ToList();
+
             return View("Form", viewModel);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(BookFromViewModel model)
@@ -162,86 +180,77 @@ namespace Bookify.Web.Controllers
             if (!ModelState.IsValid)
                 return View("Form", PopulateViewModel(model));
 
-            var book = _context.Books.Include(b => b.Categories).SingleOrDefault(b => b.Id == model.Id);
+            var book = _context.Books
+                .Include(b => b.Categories)
+                .Include(b => b.Copies)
+                .SingleOrDefault(b => b.Id == model.Id);
 
             if (book is null)
                 return NotFound();
-            string imagePublicId = null;
+
+            //string imagePublicId = null;
 
             if (model.Image is not null)
             {
                 if (!string.IsNullOrEmpty(book.ImageUrl))
                 {
-                    //var oldImagePath = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", book.ImageUrl);
+                    _imageService.Delete(book.ImageUrl, book.ImageThumbnailUrl);
 
-                    //if (System.IO.File.Exists(oldImagePath))
-                    //    System.IO.File.Delete(oldImagePath);
-                    await _cloudinary.DeleteResourcesAsync(book.ImagePublicId);
-
+                    //await _cloudinary.DeleteResourcesAsync(book.ImagePublicId);
                 }
 
-                var extension = Path.GetExtension(model.Image.FileName);
+                var imageName = $"{Guid.NewGuid()}{Path.GetExtension(model.Image.FileName)}";
+                var imagePath = "/images/books";
 
-                if (!_allowedExtensions.Contains(extension))
+                var (isUploaded, errorMessage) = await _imageService.UploadAsync(model.Image, imageName, imagePath, hasThumbnail: true);
+
+                if (!isUploaded)
                 {
-                    ModelState.AddModelError(nameof(model.Image), Errors.NotAllowedExtension);
+                    ModelState.AddModelError(nameof(Image), errorMessage!);
                     return View("Form", PopulateViewModel(model));
                 }
 
-                if (model.Image.Length > _maxAllowedSize)
-                {
-                    ModelState.AddModelError(nameof(model.Image), Errors.MaxSize);
-                    return View("Form", PopulateViewModel(model));
-                }
+                model.ImageUrl = $"{imagePath}/{imageName}";
+                model.ImageThumbnailUrl = $"{imagePath}/thumb/{imageName}";
 
-                var imageName = $"{Guid.NewGuid()}{extension}";
+                //using var straem = model.Image.OpenReadStream();
 
-                //var path = Path.Combine($"{_webHostEnvironment.WebRootPath}/images/books", imageName);
+                //var imageParams = new ImageUploadParams
+                //{
+                //    File = new FileDescription(imageName, straem),
+                //    UseFilename = true
+                //};
 
-                //using var stream = System.IO.File.Create(path);
-                //await model.Image.CopyToAsync(stream);
+                //var result = await _cloudinary.UploadAsync(imageParams);
 
-                //model.ImageUrl = imageName;
-                using var straem = model.Image.OpenReadStream();
-
-                var imageParams = new ImageUploadParams
-                {
-                    File = new FileDescription(imageName, straem),
-                    UseFilename = true
-                };
-
-                var result = await _cloudinary.UploadAsync(imageParams);
-
-                model.ImageUrl = result.SecureUrl.ToString();
-                imagePublicId = result.PublicId;
+                //model.ImageUrl = result.SecureUrl.ToString();
+                //imagePublicId = result.PublicId;
             }
 
             else if (!string.IsNullOrEmpty(book.ImageUrl))
+            {
                 model.ImageUrl = book.ImageUrl;
+                model.ImageThumbnailUrl = book.ImageThumbnailUrl;
+            }
 
             book = _mapper.Map(model, book);
+            book.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             book.LastUpdatedOn = DateTime.Now;
-            book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl!);
-            book.ImagePublicId = imagePublicId;
+            //book.ImageThumbnailUrl = GetThumbnailUrl(book.ImageUrl!);
+            //book.ImagePublicId = imagePublicId;
 
             foreach (var category in model.SelectedCategories)
                 book.Categories.Add(new BookCategory { CategoryId = category });
 
+            if (!model.IsAvailableForRental)
+                foreach (var copy in book.Copies)
+                    copy.IsAvailableForRental = false;
+
             _context.SaveChanges();
 
-            return RedirectToAction(nameof(Details), new {id = book.Id});
+            return RedirectToAction(nameof(Details), new { id = book.Id });
         }
-        private BookFromViewModel PopulateViewModel(BookFromViewModel? model = null)
-        {
-            BookFromViewModel viewModel = model is null ? new BookFromViewModel() : model;
-            var authors = _context.Authors.Where(a => !a.IsDeleted).OrderBy(a => a.Name).ToList();
-            var categories = _context.Categories.Where(a => !a.IsDeleted).OrderBy(a => a.Name).ToList();
 
-            viewModel.Authors = _mapper.Map<IEnumerable<SelectListItem>>(authors);
-            viewModel.Categories = _mapper.Map<IEnumerable<SelectListItem>>(categories);
-            
-            return viewModel;
-        }
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ToggleStatus(int id)
@@ -252,12 +261,14 @@ namespace Bookify.Web.Controllers
                 return NotFound();
 
             book.IsDeleted = !book.IsDeleted;
+            book.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             book.LastUpdatedOn = DateTime.Now;
 
             _context.SaveChanges();
 
             return Ok();
         }
+
         public IActionResult AllowItem(BookFromViewModel model)
         {
             var book = _context.Books.SingleOrDefault(b => b.Title == model.Title && b.AuthorId == model.AuthorId);
@@ -265,6 +276,20 @@ namespace Bookify.Web.Controllers
 
             return Json(isAllowed);
         }
+
+        private BookFromViewModel PopulateViewModel(BookFromViewModel? model = null)
+        {
+            BookFromViewModel viewModel = model is null ? new BookFromViewModel() : model;
+
+            var authors = _context.Authors.Where(a => !a.IsDeleted).OrderBy(a => a.Name).ToList();
+            var categories = _context.Categories.Where(a => !a.IsDeleted).OrderBy(a => a.Name).ToList();
+
+            viewModel.Authors = _mapper.Map<IEnumerable<SelectListItem>>(authors);
+            viewModel.Categories = _mapper.Map<IEnumerable<SelectListItem>>(categories);
+
+            return viewModel;
+        }
+
         private string GetThumbnailUrl(string url)
         {
             var separator = "image/upload/";
@@ -274,9 +299,6 @@ namespace Bookify.Web.Controllers
 
             return thumbnailUrl;
         }
-
-
-
     }
 
 }

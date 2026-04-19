@@ -1,10 +1,7 @@
 ﻿using Bookify.Web.Core.Consts;
-using Bookify.Web.Core.Models;
 using ExpressiveAnnotations.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.ComponentModel.DataAnnotations; // Add this line
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace Bookify.Web.Core.ViewModels
@@ -31,11 +28,12 @@ namespace Bookify.Web.Core.ViewModels
 
         [Required(ErrorMessage = "Publishing date is required")]
         [Display(Name = "Publishing Date")]
-        [AssertThat("PublishingDate <= Today()", ErrorMessage = Errors.NotAllowedFutureDates)]
+        [AssertThat("PublishingDate <= Today()", ErrorMessage = Errors.NotAllowFutureDates)]
         public DateTime PublishingDate { get; set; } = DateTime.Now;
 
         public IFormFile? Image { get; set; }
         public string? ImageUrl { get; set; }
+        public string? ImageThumbnailUrl { get; set; }
 
         [Display(Name = "Is available for rental?")]
         public bool IsAvailableForRental { get; set; }
