@@ -1,32 +1,34 @@
-﻿using Bookify.Web.Core.Models;
+﻿using AutoMapper;
+using Bookify.Web.Core.Consts;
+using Bookify.Web.Core.Models;
 using Bookify.Web.Filters;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Bookify.Web.Controllers
 {
+    [Authorize(Roles = AppRoles.Archive)]
     public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public CategoriesController(ApplicationDbContext context)
+        public CategoriesController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         [HttpGet]
         public IActionResult Index()
         {
-            //TODO: use viewModel
-            var categories = _context.Categories.Select(c => new CategoryViewModel
-            {
-                Id = c.Id,
-                Name = c.Name,
-                IsDeleted = c.IsDeleted,
-                LastUpdatedOn = c.LastUpdatedOn,
-            })
-                .AsNoTracking().ToList();
-            return View(categories);
+            var categories = _context.Categories.AsNoTracking().ToList();
+
+            var viewModel = _mapper.Map<IEnumerable<CategoryViewModel>>(categories);
+
+            return View(viewModel);
         }
 
         [HttpGet]
@@ -43,16 +45,14 @@ namespace Bookify.Web.Controllers
             if (!ModelState.IsValid)
                 return BadRequest();
 
-            var category = new Category { Name = model.Name };
+            var category = _mapper.Map<Category>(model);
+            category.CreatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+
             _context.Add(category);
             _context.SaveChanges();
-            var viewModel = new CategoryViewModel
-            {
-                Id = category.Id,
-                Name = category.Name,
-                IsDeleted = category.IsDeleted,
-                LastUpdatedOn = category.LastUpdatedOn
-            };
+
+            var viewModel = _mapper.Map<CategoryViewModel>(category);
+
             return PartialView("_CategoryRow", viewModel);
         }
 
@@ -65,11 +65,7 @@ namespace Bookify.Web.Controllers
             if (category is null)
                 return NotFound();
 
-            var viewModel = new CategoryFormViewModel
-            {
-                Id = id,
-                Name = category.Name
-            };
+            var viewModel = _mapper.Map<CategoryFormViewModel>(category);
 
             return PartialView("_Form", viewModel);
         }
@@ -86,18 +82,14 @@ namespace Bookify.Web.Controllers
             if (category is null)
                 return NotFound();
 
-            category.Name = model.Name;
+            category = _mapper.Map(model, category);
+            category.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             category.LastUpdatedOn = DateTime.Now;
 
             _context.SaveChanges();
 
-            var viewModel = new CategoryViewModel
-            {
-                Id = category.Id,
-                Name = category.Name,
-                IsDeleted = category.IsDeleted,
-                LastUpdatedOn = category.LastUpdatedOn
-            };
+            var viewModel = _mapper.Map<CategoryViewModel>(category);
+
             return PartialView("_CategoryRow", viewModel);
         }
 
@@ -111,6 +103,7 @@ namespace Bookify.Web.Controllers
                 return NotFound();
 
             category.IsDeleted = !category.IsDeleted;
+            category.LastUpdatedById = User.FindFirst(ClaimTypes.NameIdentifier)!.Value;
             category.LastUpdatedOn = DateTime.Now;
 
             _context.SaveChanges();
@@ -122,8 +115,8 @@ namespace Bookify.Web.Controllers
         {
             var category = _context.Categories.SingleOrDefault(c => c.Name == model.Name);
             var isAllowed = category is null || category.Id.Equals(model.Id);
+
             return Json(isAllowed);
         }
-       
     }
 }
