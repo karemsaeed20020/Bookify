@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Context;
@@ -85,6 +86,11 @@ namespace Bookify.Web
                 policy.RequireAuthenticatedUser();
                 policy.RequireRole(AppRoles.Admin);
             }));
+
+            builder.Services.AddMvc(options =>
+                options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute())
+            );
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -98,6 +104,21 @@ namespace Bookify.Web
             }
             app.UseExceptionHandler("/Home/Error");
             app.UseStatusCodePagesWithReExecute("/Home/Error", "?statusCode={0}");
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
+            app.UseCookiePolicy(new CookiePolicyOptions
+            {
+                Secure = CookieSecurePolicy.Always
+            });
+
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers.Add("X-Frame-Options", "Deny");
+
+                await next();
+            });
 
 
             app.UseRouting();
@@ -114,7 +135,6 @@ namespace Bookify.Web
             await DefaultRoles.SeedAsync(roleManger);
             await DefaultUsers.SeedAdminUserAsync(userManger);
 
-            app.UseStaticFiles();
             app.MapStaticAssets();
 
             app.MapRazorPages()
