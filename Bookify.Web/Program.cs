@@ -8,12 +8,16 @@ using Bookify.Web.Settings;
 using Bookify.Web.Tasks;
 using Hangfire;
 using Hangfire.Dashboard;
+using HashidsNet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Context;
 using System.Reflection;
+using System.Security.Claims;
 
 namespace Bookify.Web
 {
@@ -27,6 +31,11 @@ namespace Bookify.Web
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
+
+            // Add Serilog
+            Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
+
+            builder.Host.UseSerilog();
 
             //builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<ApplicationDbContext>();
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -48,6 +57,7 @@ namespace Bookify.Web
             builder.Services.AddTransient<IImageService, ImageService>();
             builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.AddTransient<IEmailBodyBuilder, EmailBodyBuilder>();
+            builder.Services.AddSingleton<IHashids>(_ => new Hashids("f1nd1ngn3m0", minHashLength: 11));
             builder.Services.Configure<IdentityOptions>(options =>
             {
                 options.Password.RequiredLength = 8;
@@ -86,6 +96,10 @@ namespace Bookify.Web
             {
                 app.UseExceptionHandler("/Home/Error");
             }
+            app.UseExceptionHandler("/Home/Error");
+            app.UseStatusCodePagesWithReExecute("/Home/Error", "?statusCode={0}");
+
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -100,12 +114,9 @@ namespace Bookify.Web
             await DefaultRoles.SeedAsync(roleManger);
             await DefaultUsers.SeedAdminUserAsync(userManger);
 
-
+            app.UseStaticFiles();
             app.MapStaticAssets();
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+
             app.MapRazorPages()
                .WithStaticAssets();
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -126,6 +137,19 @@ namespace Bookify.Web
             var hangfireTasks = new HangfireTasks(dbContext, webHostEnvironment, emailSender, emailBodyBuilder);
 
             RecurringJob.AddOrUpdate(() => hangfireTasks.PrepareExpirationAlert(), "0 14 * * *");
+
+            app.Use(async (context, next) =>
+            {
+                LogContext.PushProperty("UserId", context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                LogContext.PushProperty("UserName", context.User.FindFirst(ClaimTypes.Name)?.Value);
+
+                await next();
+            });
+            app.UseSerilogRequestLogging();
+            app.MapControllerRoute(
+               name: "default",
+               pattern: "{controller=Home}/{action=Index}/{id?}")
+               .WithStaticAssets();
             app.Run();
         }
     }

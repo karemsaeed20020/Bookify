@@ -28,6 +28,8 @@ function showErrorMessage(message = 'Something went wrong!') {
 
 function disableSubmitButtons(btn) {
     $(btn).attr("disabled", "disabled")
+    // إضافة خاصية مؤشر التحميل الخاصة بـ Metronic
+    $(btn).attr("data-kt-indicator", "on");
 }
 
 function onModalBegin() {
